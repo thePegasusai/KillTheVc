@@ -47,6 +47,6 @@ OpenCV: A library for computer vision tasks, including image and video processin
 MediaPipe: A framework for building multimodal (e.g., video, audio) applied ML pipelines.
 Author
 
-This game was developed by [Your Name] as part of the SensoryLink/Project Thalamus project.
+This game was developed by [Potus] as part of the SensoryLink/Project Thalamus project.
 
 Enjoy playing Kill the VC and have fun defeating the enemies! Feel free to contribute to the project by submitting bug reports, feature requests, or pull requests. Happy gaming!
