@@ -80,7 +80,7 @@ This game was developed using the following fantastic libraries:
 
 ## Author
 
-This game was developed by [Potus] as part of the SensoryLink/Project Thalamus project.
+This game was developed by [iman, Blackboyzeus, Potus] as part of the SensoryLink/Project Thalamus project.
 
 ## Contributing
 
