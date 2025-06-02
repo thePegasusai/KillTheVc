@@ -83,11 +83,16 @@ except:
 
 # Try to load background music
 try:
-    pygame.mixer.music.load("assets/Assets/Laserpm.wav")
+    pygame.mixer.music.load("assets/sounds/Joh F.mp4")
     has_music = True
 except:
-    print("Background music file not found. Continuing without music.")
-    has_music = False
+    try:
+        # Fallback to laser sound if main music not found
+        pygame.mixer.music.load("assets/Assets/Laserpm.wav")
+        has_music = True
+    except:
+        print("Background music files not found. Continuing without music.")
+        has_music = False
 
 # Game variables
 spaceship_x = window_width // 2 - spaceship_width // 2

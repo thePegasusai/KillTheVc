@@ -117,8 +117,16 @@ To create your own executable:
 
 ```
 KillTheVc/
-├── assets/                # Game assets (images, sounds)
-│   └── Assets/            # Images and audio files
+├── assets/                # Game assets
+│   ├── Assets/            # Images and sound effects
+│   │   ├── gringotts.jpg  # Background image
+│   │   ├── icon-removebg-preview.png  # Game icon
+│   │   ├── laser.png      # Laser image
+│   │   ├── Laserpm.wav    # Laser sound effect
+│   │   ├── spaceship1-removebg-preview.png  # Player ship
+│   │   └── Vc-removebg-preview.png  # Enemy VC image
+│   └── sounds/            # Background music
+│       └── Joh F.mp4      # Background music file
 ├── dist/                  # Compiled executables
 ├── game.py                # Main game code
 ├── requirements.txt       # Python dependencies

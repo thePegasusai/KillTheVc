@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Script to run the game in Docker with X11 forwarding
+# Script to run the game in Docker with X11 forwarding and audio support
 
 # For macOS users
 if [[ "$OSTYPE" == "darwin"* ]]; then
@@ -24,10 +24,13 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
     
 # For Linux users
 elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
-    echo "Detected Linux. Setting up X11 forwarding."
+    echo "Detected Linux. Setting up X11 forwarding and audio."
     
     # Allow X11 forwarding
     xhost +local:docker
+    
+    # Set up PulseAudio for Docker
+    export XDG_RUNTIME_DIR=/run/user/$(id -u)
     
     # Run Docker Compose
     docker-compose up
@@ -41,7 +44,8 @@ else
     echo "1. Install an X server like VcXsrv or Xming"
     echo "2. Start the X server with 'Disable access control' checked"
     echo "3. Set DISPLAY environment variable to your IP address followed by :0"
-    echo "4. Run 'docker-compose up'"
+    echo "4. For audio, you may need to install and configure PulseAudio on Windows"
+    echo "5. Run 'docker-compose up'"
     
     # Run Docker Compose
     docker-compose up

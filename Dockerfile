@@ -10,6 +10,8 @@ RUN apt-get update && apt-get install -y \
     libxtst6 \
     x11-apps \
     xvfb \
+    pulseaudio \
+    alsa-utils \
     && rm -rf /var/lib/apt/lists/*
 
 # Set up working directory
@@ -28,8 +30,9 @@ COPY . .
 RUN useradd -m appuser
 USER appuser
 
-# Set environment variable for display
+# Set environment variables
 ENV DISPLAY=:0
+ENV PULSE_SERVER=unix:${XDG_RUNTIME_DIR}/pulse/native
 
 # Command to run the game
 CMD ["python", "game.py"]
