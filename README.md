@@ -2,6 +2,8 @@
 
 Welcome to Kill the VC, a thrilling hand gesture game where you battle against a fearsome Venture Capitalist (VC) using your very own spaceship! Control your ship and unleash lasers with intuitive hand movements detected via your webcam. Defeat the VC while dodging other enemies to claim victory!
 
+![Game Screenshot](assets/Assets/gringotts.jpg)
+
 ## Features
 
 - **Hand Gesture Control**: Control your spaceship using hand movements captured by your webcam
@@ -67,7 +69,35 @@ You have multiple options to run Kill the VC:
    ./run_docker.sh
    ```
 
-### Building from Source
+## How to Play
+
+1. **Main Menu**: When you start the game, you'll see the main menu with these options:
+   - **Play Game**: Start the game immediately
+   - **Instructions**: View how to play the game
+   - **Calibrate Hand Tracking**: Adjust the sensitivity of hand tracking
+   - **Quit**: Exit the game
+
+2. **Calibration:**
+   - Use the UP/DOWN arrow keys to adjust the hand tracking sensitivity
+   - Higher values make the tracking less sensitive, lower values make it more sensitive
+   - Test your hand movements in real-time to find the optimal setting
+   - Press ENTER to save your settings and return to the menu
+
+3. **Control the Spaceship:**
+   - **Hand Placement:** Position your hand in front of your webcam so it's clearly visible
+   - **Movement:** Move your hand to navigate the spaceship across the screen
+   - **Firing:** Press the `Spacebar` key to fire a laser
+
+4. **Objective:**
+   - **Defeat the VC:** The VC is marked with a subtle red circle and is your primary target
+   - **Avoid or Destroy Other Enemies:** Regular enemies give fewer points but are still worth shooting
+   - **Health & Score:** Keep an eye on the VC's health bar and your score at the top of the screen
+
+5. **Victory:** The game ends in victory when you successfully destroy the VC (the VC's health reaches zero). A victory message will be displayed with your final score.
+
+6. **Exiting the Game:** To quit the game, press ESC during gameplay or select Quit from the main menu.
+
+## Building from Source
 
 To create your own executable:
 
@@ -83,41 +113,37 @@ To create your own executable:
 
 3. Find the executable in the `dist` directory.
 
-## How to Play
+## Project Structure
 
-1. **Run the Game:** Execute the main Python script:
+```
+KillTheVc/
+├── assets/                # Game assets (images, sounds)
+│   └── Assets/            # Images and audio files
+├── dist/                  # Compiled executables
+├── game.py                # Main game code
+├── requirements.txt       # Python dependencies
+├── setup.py               # Package setup information
+├── pyinstaller_build.py   # Build script for executables
+├── Dockerfile             # Docker configuration
+├── docker-compose.yml     # Docker Compose configuration
+└── run_docker.sh          # Script to run the game in Docker
+```
 
-   ```bash
-   python game.py
-   ```
+## Development
 
-   This will launch the game with the main menu.
+### Prerequisites
 
-2. **Menu Navigation:**
-   * **Play Game**: Start the game immediately
-   * **Instructions**: View how to play the game
-   * **Calibrate Hand Tracking**: Adjust the sensitivity of hand tracking
-   * **Quit**: Exit the game
+- Python 3.7 or later
+- Webcam
+- Required Python packages (see requirements.txt)
 
-3. **Calibration:**
-   * Use the UP/DOWN arrow keys to adjust the hand tracking sensitivity
-   * Higher values make the tracking less sensitive, lower values make it more sensitive
-   * Test your hand movements in real-time to find the optimal setting
-   * Press ENTER to save your settings and return to the menu
+### Contributing
 
-4. **Control the Spaceship:**
-   * **Hand Placement:** Position your hand in front of your webcam so it's clearly visible
-   * **Movement:** Move your hand to navigate the spaceship across the screen
-   * **Firing:** Press the `Spacebar` key to fire a laser
-
-5. **Objective:**
-   * **Defeat the VC:** The VC is marked with a subtle red circle and is your primary target
-   * **Avoid or Destroy Other Enemies:** Regular enemies give fewer points but are still worth shooting
-   * **Health & Score:** Keep an eye on the VC's health bar and your score at the top of the screen
-
-6. **Victory:** The game ends in victory when you successfully destroy the VC (the VC's health reaches zero). A victory message will be displayed with your final score.
-
-7. **Exiting the Game:** To quit the game, press ESC during gameplay or select Quit from the main menu.
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
 ## License
 
@@ -136,8 +162,8 @@ This game was developed using the following fantastic libraries:
 
 This game was developed by [iman, Blackboyzeus, Potus] as part of the SensoryLink/Project Thalamus project.
 
-## Contributing
+## Contact
 
-Enjoy playing Kill the VC! We welcome contributions. Please feel free to submit bug reports, feature requests, or pull requests through the project's issue tracker or repository (if available).
+If you have any questions or feedback, please open an issue on GitHub or contact the authors directly.
 
 Have fun defeating the VC!
