@@ -1,0 +1,15 @@
+version: '3'
+
+services:
+  game:
+    build: .
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix
+      - .:/app
+    environment:
+      - DISPLAY=${DISPLAY}
+    devices:
+      - /dev/video0:/dev/video0
+    network_mode: host
+    # For Mac users, you'll need to run XQuartz and allow connections from network clients
+    # For Windows users, you'll need to use an X server like VcXsrv or Xming

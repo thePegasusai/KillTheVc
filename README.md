@@ -1,82 +1,136 @@
 # Kill the VC - Hand Gesture Game
 
-Welcome to Kill the VC, a thrilling hand gesture game where you battle against a fearsome Venture Capitalist (VC) using your very own spaceship!  Control your ship and unleash lasers with intuitive hand movements detected via your webcam.  Defeat the VC while dodging other enemies to claim victory!
+Welcome to Kill the VC, a thrilling hand gesture game where you battle against a fearsome Venture Capitalist (VC) using your very own spaceship! Control your ship and unleash lasers with intuitive hand movements detected via your webcam. Defeat the VC while dodging other enemies to claim victory!
 
-## Installation
+## Features
 
-Follow these steps to get Kill the VC up and running on your system:
+- **Hand Gesture Control**: Control your spaceship using hand movements captured by your webcam
+- **Interactive Menu System**: Easy-to-navigate menu with game options
+- **Calibration Tool**: Adjust hand tracking sensitivity to match your environment
+- **Multiple Enemies**: Battle against the main VC boss and other enemy ships
+- **Score Tracking**: Earn points as you hit enemies and progress through the game
+- **Sound Effects**: Immersive audio experience with laser sounds and background music
 
-1.  **Install Python:**  Ensure you have Python 3.7 or later installed. You can download it from [python.org](https://www.python.org/downloads/).
+## Running the Game
 
-2.  **Clone or Download:**  Obtain the game files by either cloning the Git repository (if available) or downloading the ZIP archive from your source (e.g., GitHub).
+You have multiple options to run Kill the VC:
 
-3.  **Navigate to Project Directory:** Open your command prompt or terminal and navigate to the directory where you extracted or cloned the game files.  For example:
+### Option 1: Run the Executable (Easiest)
 
-    ```bash
-    cd /path/to/kill_the_vc  # Replace with your actual path
-    ```
+1. **For macOS Users:**
+   - Navigate to the `dist` directory
+   - Open the application bundle with:
+     ```bash
+     open dist/KillTheVC-darwin.app
+     ```
+   - If you get a security warning, right-click on the app and select "Open"
 
-4.  **Install Dependencies:**  Install the necessary Python packages using `pip`:
+2. **For Windows Users:**
+   - Navigate to the `dist/KillTheVC-windows` directory
+   - Double-click on `KillTheVC-windows.exe`
+   - If SmartScreen appears, click "More info" and then "Run anyway"
 
-    ```bash
-    pip install -r requirements.txt
-    ```
+3. **For Linux Users:**
+   - Navigate to the `dist/KillTheVC-linux` directory
+   - Make the file executable if needed:
+     ```bash
+     chmod +x KillTheVC-linux
+     ```
+   - Run the executable:
+     ```bash
+     ./KillTheVC-linux
+     ```
 
-    This command will read the `requirements.txt` file and install all listed packages, including Pygame, NumPy, OpenCV, and MediaPipe.
+### Option 2: Run with Python
 
-    **Important Notes on Installation:**
+1. **Install Dependencies:**
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-    *   **`requirements.txt`:**  Make sure the `requirements.txt` file is in the same directory where you are running the `pip` command.
-    *   **Possible Errors:** If you encounter errors during installation (e.g., related to OpenCV or MediaPipe), you may need to:
-        *   Ensure you have the correct version of `pip` (try `python -m pip install --upgrade pip`).
-        *   Consult the installation documentation for OpenCV or MediaPipe for specific platform requirements.  Some packages may require additional system-level dependencies.
+2. **Run the Game:**
+   ```bash
+   python game.py
+   ```
+
+### Option 3: Run with Docker
+
+1. **Install Docker:** Make sure you have Docker and Docker Compose installed on your system.
+
+2. **Set Up X11 Forwarding:**
+   - **On Linux:** No additional setup needed.
+   - **On macOS:** Install XQuartz, enable "Allow connections from network clients" in XQuartz preferences.
+   - **On Windows:** Install an X server like VcXsrv or Xming.
+
+3. **Run the Docker Container:**
+   ```bash
+   ./run_docker.sh
+   ```
+
+### Building from Source
+
+To create your own executable:
+
+1. Install PyInstaller:
+   ```bash
+   pip install pyinstaller
+   ```
+
+2. Run the build script:
+   ```bash
+   python pyinstaller_build.py
+   ```
+
+3. Find the executable in the `dist` directory.
 
 ## How to Play
 
-1.  **Run the Game:** Execute the main Python script:
+1. **Run the Game:** Execute the main Python script:
 
-    ```bash
-    python kill_the_vc.py
-    ```
+   ```bash
+   python game.py
+   ```
 
-    This will launch the game window.
+   This will launch the game with the main menu.
 
-2.  **Hand Area Threshold (Calibration):**  Before you start, you might need to adjust the `hand_area_threshold` variable in the `kill_the_vc.py` script.  This value determines how sensitive the game is to your hand movements.
+2. **Menu Navigation:**
+   * **Play Game**: Start the game immediately
+   * **Instructions**: View how to play the game
+   * **Calibrate Hand Tracking**: Adjust the sensitivity of hand tracking
+   * **Quit**: Exit the game
 
-    *   **Finding the Value:** Open `kill_the_vc.py` in a text editor.  Locate the line that defines `hand_area_threshold`.
-    *   **Adjusting:**
-        *   If the spaceship is too jittery or unresponsive, increase the `hand_area_threshold` value.
-        *   If the spaceship moves too much with small hand movements, decrease the `hand_area_threshold` value.
-    *   **Experimentation:**  Start with a default value (e.g., 10000) and adjust it slightly until you find a comfortable setting.
+3. **Calibration:**
+   * Use the UP/DOWN arrow keys to adjust the hand tracking sensitivity
+   * Higher values make the tracking less sensitive, lower values make it more sensitive
+   * Test your hand movements in real-time to find the optimal setting
+   * Press ENTER to save your settings and return to the menu
 
-3.  **Control the Spaceship:**
+4. **Control the Spaceship:**
+   * **Hand Placement:** Position your hand in front of your webcam so it's clearly visible
+   * **Movement:** Move your hand to navigate the spaceship across the screen
+   * **Firing:** Press the `Spacebar` key to fire a laser
 
-    *   **Hand Placement:** Position your hand in front of your webcam so it's clearly visible.  The game tracks the position of your hand.
-    *   **Movement:** Move your hand to navigate the spaceship horizontally across the screen.  The spaceship will generally follow the movement of your hand. Experiment to find the optimal way to control your ship.
-    *   **Firing:** Press the `Spacebar` key to fire a laser.  There is a brief cooldown period between laser shots to prevent rapid-fire.
+5. **Objective:**
+   * **Defeat the VC:** The VC is marked with a subtle red circle and is your primary target
+   * **Avoid or Destroy Other Enemies:** Regular enemies give fewer points but are still worth shooting
+   * **Health & Score:** Keep an eye on the VC's health bar and your score at the top of the screen
 
-4.  **Objective:**
+6. **Victory:** The game ends in victory when you successfully destroy the VC (the VC's health reaches zero). A victory message will be displayed with your final score.
 
-    *   **Defeat the VC:** The VC is a special, more challenging enemy.  It is the primary target.
-    *   **Avoid Other Enemies:**  While destroying regular enemies might be fun, it doesn't increase your score.  Focus on dodging them while targeting the VC.
-    *   **Health & Score:**  Keep an eye on the health bar (representing the VC's health) and your score, both displayed on the screen.
-
-5.  **Victory:**  The game ends in victory when you successfully destroy the VC (the VC's health reaches zero). A victory message will be displayed.
-
-6.  **Exiting the Game:**  To quit the game, click the close button on the game window or press the `X` key.
+7. **Exiting the Game:** To quit the game, press ESC during gameplay or select Quit from the main menu.
 
 ## License
 
-This project is licensed under the MIT License.  See the `LICENSE` file for details.
+This project is licensed under the MIT License. See the `LICENSE` file for details.
 
 ## Acknowledgements
 
 This game was developed using the following fantastic libraries:
 
-*   **Pygame:** A cross-platform set of Python modules designed for creating games.  [https://www.pygame.org/](https://www.pygame.org/)
-*   **NumPy:** A powerful library for scientific computing and array manipulation. [https://numpy.org/](https://numpy.org/)
-*   **OpenCV (cv2):** A library for computer vision tasks, including image and video processing. [https://opencv.org/](https://opencv.org/)
-*   **MediaPipe:** A framework for building multimodal (e.g., video, audio) applied ML pipelines. [https://developers.google.com/mediapipe](https://developers.google.com/mediapipe)
+* **Pygame:** A cross-platform set of Python modules designed for creating games. [https://www.pygame.org/](https://www.pygame.org/)
+* **NumPy:** A powerful library for scientific computing and array manipulation. [https://numpy.org/](https://numpy.org/)
+* **OpenCV (cv2):** A library for computer vision tasks, including image and video processing. [https://opencv.org/](https://opencv.org/)
+* **MediaPipe:** A framework for building multimodal (e.g., video, audio) applied ML pipelines. [https://developers.google.com/mediapipe](https://developers.google.com/mediapipe)
 
 ## Author
 
@@ -84,6 +138,6 @@ This game was developed by [iman, Blackboyzeus, Potus] as part of the SensoryLin
 
 ## Contributing
 
-Enjoy playing Kill the VC!  We welcome contributions.  Please feel free to submit bug reports, feature requests, or pull requests through the project's issue tracker or repository (if available).
+Enjoy playing Kill the VC! We welcome contributions. Please feel free to submit bug reports, feature requests, or pull requests through the project's issue tracker or repository (if available).
 
 Have fun defeating the VC!

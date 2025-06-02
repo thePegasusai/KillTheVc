@@ -1,4 +1,0 @@
-([('game',
-   '/Users/Pegasi/Documents/YOL&ve/SensoryLink/Project '
-   'Thalamus/Gaming/dist/game',
-   'EXECUTABLE')],)
