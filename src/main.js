@@ -351,9 +351,9 @@ function startGame(sender) {
   }, 400);
   
   try {
-    console.log('Starting game with universal launcher...');
+    console.log('Starting game with tkinter launcher...');
     
-    // Use the universal launcher for maximum compatibility
+    // Use the tkinter launcher for guaranteed window display
     const options = {
       mode: 'text',
       pythonPath: pythonExecutable,
@@ -361,7 +361,7 @@ function startGame(sender) {
       args: []
     };
     
-    pythonProcess = new PythonShell('universal_launcher.py', options);
+    pythonProcess = new PythonShell('tkinter_launcher.py', options);
     isGameRunning = true;
     
     // Clear the interval when the game actually starts
@@ -396,50 +396,43 @@ function startGame(sender) {
       if (err) {
         console.error('Game error:', err);
         
-        // If the game fails, try the standalone game as a fallback
-        if (err.message && (err.message.includes('display') || err.message.includes('video') || err.message.includes('SDL'))) {
-          console.log('Trying standalone game as fallback...');
+        // If the tkinter launcher fails, try the simple test as a last resort
+        console.log('Trying simple test as last resort...');
+        
+        try {
+          pythonProcess = new PythonShell('simple_test.py', options);
+          isGameRunning = true;
           
-          try {
-            pythonProcess = new PythonShell('standalone_game.py', options);
-            isGameRunning = true;
+          pythonProcess.on('message', function(message) {
+            console.log('Test message:', message);
+            sender.send('game-output', message);
+          });
+          
+          pythonProcess.on('stderr', function(stderr) {
+            console.error('Test stderr:', stderr);
+          });
+          
+          pythonProcess.end(function (err2, code2, signal2) {
+            console.log('Test process ended:', err2, code2, signal2);
+            isGameRunning = false;
             
-            pythonProcess.on('message', function(message) {
-              console.log('Fallback game message:', message);
-              sender.send('game-output', message);
-            });
-            
-            pythonProcess.on('stderr', function(stderr) {
-              console.error('Fallback game stderr:', stderr);
-            });
-            
-            pythonProcess.end(function (err2, code2, signal2) {
-              console.log('Fallback game process ended:', err2, code2, signal2);
-              isGameRunning = false;
-              
-              if (err2) {
-                sender.send('game-status', {
-                  status: 'error',
-                  message: `Game exited with error: ${err2.message || 'Unknown error'}`
-                });
-              } else {
-                sender.send('game-status', {
-                  status: 'ended',
-                  message: `Game ended successfully`
-                });
-              }
-            });
-          } catch (fallbackError) {
-            console.error('Failed to start fallback game:', fallbackError);
-            sender.send('game-status', {
-              status: 'error',
-              message: `Failed to start game: ${fallbackError.message || 'Unknown error'}`
-            });
-          }
-        } else {
+            if (err2) {
+              sender.send('game-status', {
+                status: 'error',
+                message: `Game exited with error: ${err2.message || 'Unknown error'}`
+              });
+            } else {
+              sender.send('game-status', {
+                status: 'ended',
+                message: `Game ended successfully`
+              });
+            }
+          });
+        } catch (fallbackError) {
+          console.error('Failed to start test:', fallbackError);
           sender.send('game-status', {
             status: 'error',
-            message: `Game exited with error: ${err.message || 'Unknown error'}`
+            message: `Failed to start game: ${fallbackError.message || 'Unknown error'}`
           });
         }
       } else {
