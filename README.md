@@ -14,19 +14,21 @@ A thrilling hand gesture game where you battle against a fearsome Venture Capita
 Simply download the installer for your platform and run it. No additional setup required!
 
 ### Windows
-1. Download the Windows installer
+1. Download the Windows installer from the `dist` directory
 2. Run the installer and follow the prompts
 3. Launch "Kill the VC" from your Start menu
 
 ### macOS
-1. Download the macOS DMG file
+1. Download the macOS DMG file from the `dist` directory
 2. Open the DMG and drag the app to your Applications folder
 3. Launch "Kill the VC" from your Applications folder
 
 ## Project Structure
 
 - `src/` - Source code for the application
-- `assets/` - Game assets (images, sounds, etc.)
+  - `game/` - Game Python code
+  - `python/` - Bundled Python environment
+  - Other Electron app files
 - `dist/` - Distribution packages
 - `docs/` - Documentation
 
