@@ -7,6 +7,7 @@ const { execSync, spawn } = require('child_process');
 const { fixPythonPaths } = require('./python_fix');
 const { isFirstRun, runFirstTimeSetup } = require('./installer');
 
+// Global variables
 let mainWindow;
 let pythonProcess;
 let isGameRunning = false;
@@ -349,18 +350,28 @@ function startGame(sender) {
   ];
   
   let stepIndex = 0;
-  // Use let instead of const for progressInterval to avoid reassignment error
-  let localProgressInterval = setInterval(() => {
+  
+  // Clear any existing interval
+  if (progressInterval) {
+    clearInterval(progressInterval);
+    progressInterval = null;
+  }
+  
+  // Create a new interval with let
+  let localInterval = setInterval(() => {
     if (stepIndex < loadingSteps.length) {
-      sender.send('loading-progress', loadingSteps[stepIndex]);
+      if (sender && !sender.isDestroyed()) {
+        sender.send('loading-progress', loadingSteps[stepIndex]);
+      }
       stepIndex++;
     } else {
-      clearInterval(localProgressInterval);
+      clearInterval(localInterval);
+      localInterval = null;
     }
   }, 400);
   
-  // Store the interval reference in the global variable
-  progressInterval = localProgressInterval;
+  // Store reference in global variable
+  progressInterval = localInterval;
   
   try {
     console.log('Starting game with tkinter launcher...');
@@ -378,9 +389,14 @@ function startGame(sender) {
     
     // Clear the interval when the game actually starts
     setTimeout(() => {
-      if (progressInterval) {
-        clearInterval(progressInterval);
-        progressInterval = null;
+      // Use a local variable for the interval reference
+      let intervalToClean = progressInterval;
+      if (intervalToClean) {
+        clearInterval(intervalToClean);
+        // Only set to null if it's the same interval
+        if (progressInterval === intervalToClean) {
+          progressInterval = null;
+        }
       }
       
       // Check if sender is still valid before sending message
@@ -392,10 +408,12 @@ function startGame(sender) {
       }
     }, 2000);
     
-    sender.send('game-status', {
-      status: 'started',
-      message: 'Game started successfully'
-    });
+    if (sender && !sender.isDestroyed()) {
+      sender.send('game-status', {
+        status: 'started',
+        message: 'Game started successfully'
+      });
+    }
     
     pythonProcess.on('message', function(message) {
       console.log('Game message:', message);
@@ -480,6 +498,7 @@ function startGame(sender) {
       }
     });
   } catch (error) {
+    // Clean up the interval if there's an error
     if (progressInterval) {
       clearInterval(progressInterval);
       progressInterval = null;
@@ -545,14 +564,28 @@ function startSimpleGame(sender) {
   ];
   
   let stepIndex = 0;
-  const progressInterval = setInterval(() => {
+  
+  // Clear any existing interval
+  if (progressInterval) {
+    clearInterval(progressInterval);
+    progressInterval = null;
+  }
+  
+  // Create a new interval with let
+  let localInterval = setInterval(() => {
     if (stepIndex < loadingSteps.length) {
-      sender.send('loading-progress', loadingSteps[stepIndex]);
+      if (sender && !sender.isDestroyed()) {
+        sender.send('loading-progress', loadingSteps[stepIndex]);
+      }
       stepIndex++;
     } else {
-      clearInterval(progressInterval);
+      clearInterval(localInterval);
+      localInterval = null;
     }
   }, 400);
+  
+  // Store reference in global variable
+  progressInterval = localInterval;
   
   try {
     console.log('Starting simple game...');
@@ -570,21 +603,38 @@ function startSimpleGame(sender) {
     
     // Clear the interval when the game actually starts
     setTimeout(() => {
-      clearInterval(progressInterval);
-      sender.send('loading-progress', {
-        percent: 100,
-        message: 'Simple game started successfully!'
-      });
+      // Use a local variable for the interval reference
+      let intervalToClean = progressInterval;
+      if (intervalToClean) {
+        clearInterval(intervalToClean);
+        // Only set to null if it's the same interval
+        if (progressInterval === intervalToClean) {
+          progressInterval = null;
+        }
+      }
+      
+      // Check if sender is still valid before sending message
+      if (sender && !sender.isDestroyed()) {
+        sender.send('loading-progress', {
+          percent: 100,
+          message: 'Simple game started successfully!'
+        });
+      }
     }, 2000);
     
-    sender.send('game-status', {
-      status: 'started',
-      message: 'Simple game started successfully'
-    });
+    if (sender && !sender.isDestroyed()) {
+      sender.send('game-status', {
+        status: 'started',
+        message: 'Simple game started successfully'
+      });
+    }
     
     pythonProcess.on('message', function(message) {
       console.log('Game message:', message);
-      sender.send('game-output', message);
+      // Check if sender is still valid before sending message
+      if (sender && !sender.isDestroyed()) {
+        sender.send('game-output', message);
+      }
     });
     
     pythonProcess.on('stderr', function(stderr) {
@@ -596,30 +646,44 @@ function startSimpleGame(sender) {
       isGameRunning = false;
       if (err) {
         console.error('Game error:', err);
-        sender.send('game-status', {
-          status: 'error',
-          message: `Game exited with error: ${err.message || 'Unknown error'}`
-        });
+        // Check if sender is still valid before sending message
+        if (sender && !sender.isDestroyed()) {
+          sender.send('game-status', {
+            status: 'error',
+            message: `Game exited with error: ${err.message || 'Unknown error'}`
+          });
+        }
       } else {
-        sender.send('game-status', {
-          status: 'ended',
-          message: `Game ended successfully`
-        });
+        // Check if sender is still valid before sending message
+        if (sender && !sender.isDestroyed()) {
+          sender.send('game-status', {
+            status: 'ended',
+            message: `Game ended successfully`
+          });
+        }
       }
     });
   } catch (error) {
-    clearInterval(progressInterval);
+    // Clean up the interval if there's an error
+    if (progressInterval) {
+      clearInterval(progressInterval);
+      progressInterval = null;
+    }
+    
     console.error('Failed to start simple game:', error);
     
-    sender.send('loading-progress', {
-      percent: 100,
-      message: `Error: ${error.message || 'Unknown error'}`
-    });
-    
-    sender.send('game-status', {
-      status: 'error',
-      message: `Failed to start simple game: ${error.message || 'Unknown error'}`
-    });
+    // Check if sender is still valid before sending message
+    if (sender && !sender.isDestroyed()) {
+      sender.send('loading-progress', {
+        percent: 100,
+        message: `Error: ${error.message || 'Unknown error'}`
+      });
+      
+      sender.send('game-status', {
+        status: 'error',
+        message: `Failed to start simple game: ${error.message || 'Unknown error'}`
+      });
+    }
   }
 }
 
@@ -658,14 +722,28 @@ function runDiagnostics(sender) {
   ];
   
   let stepIndex = 0;
-  const progressInterval = setInterval(() => {
+  
+  // Clear any existing interval
+  if (progressInterval) {
+    clearInterval(progressInterval);
+    progressInterval = null;
+  }
+  
+  // Create a new interval with let
+  let localInterval = setInterval(() => {
     if (stepIndex < loadingSteps.length) {
-      sender.send('loading-progress', loadingSteps[stepIndex]);
+      if (sender && !sender.isDestroyed()) {
+        sender.send('loading-progress', loadingSteps[stepIndex]);
+      }
       stepIndex++;
     } else {
-      clearInterval(progressInterval);
+      clearInterval(localInterval);
+      localInterval = null;
     }
   }, 400);
+  
+  // Store reference in global variable
+  progressInterval = localInterval;
   
   try {
     console.log('Running diagnostics...');
@@ -683,16 +761,24 @@ function runDiagnostics(sender) {
     diagnosticProcess.on('message', function(results) {
       console.log('Diagnostic results:', results);
       
-      clearInterval(progressInterval);
-      sender.send('loading-progress', {
-        percent: 100,
-        message: 'Diagnostics completed'
-      });
+      // Clean up the interval
+      if (progressInterval) {
+        clearInterval(progressInterval);
+        progressInterval = null;
+      }
       
-      sender.send('diagnostic-result', {
-        success: results.success,
-        details: results.details
-      });
+      // Check if sender is still valid before sending message
+      if (sender && !sender.isDestroyed()) {
+        sender.send('loading-progress', {
+          percent: 100,
+          message: 'Diagnostics completed'
+        });
+        
+        sender.send('diagnostic-result', {
+          success: results.success,
+          details: results.details
+        });
+      }
     });
     
     diagnosticProcess.on('stderr', function(stderr) {
@@ -703,33 +789,49 @@ function runDiagnostics(sender) {
       console.log('Diagnostic process ended:', err, code, signal);
       
       if (err) {
-        clearInterval(progressInterval);
+        // Clean up the interval
+        if (progressInterval) {
+          clearInterval(progressInterval);
+          progressInterval = null;
+        }
+        
         console.error('Diagnostic error:', err);
         
-        sender.send('loading-progress', {
-          percent: 100,
-          message: `Diagnostic error: ${err.message || 'Unknown error'}`
-        });
-        
-        sender.send('diagnostic-result', {
-          success: false,
-          details: `Diagnostic error: ${err.message || 'Unknown error'}`
-        });
+        // Check if sender is still valid before sending message
+        if (sender && !sender.isDestroyed()) {
+          sender.send('loading-progress', {
+            percent: 100,
+            message: `Diagnostic error: ${err.message || 'Unknown error'}`
+          });
+          
+          sender.send('diagnostic-result', {
+            success: false,
+            details: `Diagnostic error: ${err.message || 'Unknown error'}`
+          });
+        }
       }
     });
   } catch (error) {
-    clearInterval(progressInterval);
+    // Clean up the interval if there's an error
+    if (progressInterval) {
+      clearInterval(progressInterval);
+      progressInterval = null;
+    }
+    
     console.error('Failed to run diagnostics:', error);
     
-    sender.send('loading-progress', {
-      percent: 100,
-      message: `Error: ${error.message || 'Unknown error'}`
-    });
-    
-    sender.send('diagnostic-result', {
-      success: false,
-      details: `Failed to run diagnostics: ${error.message || 'Unknown error'}`
-    });
+    // Check if sender is still valid before sending message
+    if (sender && !sender.isDestroyed()) {
+      sender.send('loading-progress', {
+        percent: 100,
+        message: `Error: ${error.message || 'Unknown error'}`
+      });
+      
+      sender.send('diagnostic-result', {
+        success: false,
+        details: `Failed to run diagnostics: ${error.message || 'Unknown error'}`
+      });
+    }
   }
 }
 
