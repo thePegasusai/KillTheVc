@@ -3,8 +3,9 @@ const path = require('path');
 const { PythonShell } = require('python-shell');
 const fs = require('fs');
 const os = require('os');
-const { execSync } = require('child_process');
+const { execSync, spawn } = require('child_process');
 const { fixPythonPaths } = require('./python_fix');
+const { isFirstRun, runFirstTimeSetup } = require('./installer');
 
 let mainWindow;
 let pythonProcess;
@@ -221,6 +222,12 @@ app.on('ready', async () => {
   
   createWindow();
   
+  // Check if this is the first run
+  if (isFirstRun()) {
+    console.log('First run detected, running setup...');
+    await runFirstTimeSetup(mainWindow);
+  }
+  
   // Show license agreement on first run
   const accepted = await showLicenseAgreement();
   if (!accepted) {
@@ -308,7 +315,7 @@ function startGame(sender) {
     try {
       sender.send('loading-progress', {
         percent: 20,
-        message: 'Fixing Python paths for macOS...'
+        message: 'Configuring system environment...'
       });
       
       // Run the fix_python_paths.sh script
@@ -344,9 +351,9 @@ function startGame(sender) {
   }, 400);
   
   try {
-    console.log('Starting standalone game...');
+    console.log('Starting game with universal launcher...');
     
-    // Use the standalone game to ensure window display works
+    // Use the universal launcher for maximum compatibility
     const options = {
       mode: 'text',
       pythonPath: pythonExecutable,
@@ -354,8 +361,7 @@ function startGame(sender) {
       args: []
     };
     
-    // Try to run the standalone game first
-    pythonProcess = new PythonShell('standalone_game.py', options);
+    pythonProcess = new PythonShell('universal_launcher.py', options);
     isGameRunning = true;
     
     // Clear the interval when the game actually starts
@@ -380,13 +386,8 @@ function startGame(sender) {
     pythonProcess.on('stderr', function(stderr) {
       console.error('Game stderr:', stderr);
       
-      // If we see specific display errors, try to provide helpful information
-      if (stderr.includes('display') || stderr.includes('video') || stderr.includes('SDL')) {
-        sender.send('game-status', {
-          status: 'error',
-          message: 'Display error: Could not initialize game window. Please check your display settings.'
-        });
-      }
+      // Log all stderr output for debugging
+      console.log('Python stderr:', stderr);
     });
     
     pythonProcess.end(function (err, code, signal) {
@@ -395,12 +396,12 @@ function startGame(sender) {
       if (err) {
         console.error('Game error:', err);
         
-        // If the standalone game fails, try the direct launcher as a fallback
+        // If the game fails, try the standalone game as a fallback
         if (err.message && (err.message.includes('display') || err.message.includes('video') || err.message.includes('SDL'))) {
-          console.log('Trying direct launcher as fallback...');
+          console.log('Trying standalone game as fallback...');
           
           try {
-            pythonProcess = new PythonShell('direct_launcher.py', options);
+            pythonProcess = new PythonShell('standalone_game.py', options);
             isGameRunning = true;
             
             pythonProcess.on('message', function(message) {

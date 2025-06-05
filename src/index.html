@@ -194,6 +194,26 @@
             margin-top: 20px;
             display: none;
         }
+        .setup-container {
+            display: none;
+            width: 100%;
+        }
+        .setup-step {
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: #2c3e50;
+            border-radius: 5px;
+        }
+        .setup-step h3 {
+            margin-top: 0;
+            color: #3498db;
+        }
+        .setup-step p {
+            margin-bottom: 10px;
+        }
+        .setup-progress {
+            margin-top: 20px;
+        }
     </style>
 </head>
 <body>
@@ -210,7 +230,25 @@
     </div>
     
     <div class="content">
-        <div class="game-container">
+        <!-- Setup Container -->
+        <div class="setup-container" id="setupContainer">
+            <div class="game-container">
+                <h2 class="game-title">Setting Up Kill the VC</h2>
+                <p>We're preparing everything for the best gaming experience. This will only take a moment.</p>
+                
+                <div class="setup-step">
+                    <h3>Installation Progress</h3>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="setupProgressFill"></div>
+                        <div class="progress-text" id="setupProgressText">0%</div>
+                    </div>
+                    <p id="setupMessage">Initializing setup...</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Game Container -->
+        <div class="game-container" id="gameContainer">
             <h2 class="game-title">Kill the VC</h2>
             <p class="game-description">
                 Welcome to Kill the VC, a thrilling hand gesture game where you battle against a fearsome Venture Capitalist (VC) using your very own spaceship! Control your ship and unleash lasers with intuitive hand movements detected via your webcam.
@@ -262,6 +300,11 @@
         const errorDetails = document.getElementById('errorDetails');
         const errorLog = document.getElementById('errorLog');
         const fallbackOptions = document.getElementById('fallbackOptions');
+        const setupContainer = document.getElementById('setupContainer');
+        const gameContainer = document.getElementById('gameContainer');
+        const setupProgressFill = document.getElementById('setupProgressFill');
+        const setupProgressText = document.getElementById('setupProgressText');
+        const setupMessage = document.getElementById('setupMessage');
         
         // Error log storage
         let fullErrorLog = '';
@@ -374,6 +417,23 @@
             }
             
             enableButtons();
+        });
+        
+        // Setup event listeners
+        ipcRenderer.on('show-setup', () => {
+            setupContainer.style.display = 'block';
+            gameContainer.style.display = 'none';
+        });
+        
+        ipcRenderer.on('setup-progress', (event, data) => {
+            setupProgressFill.style.width = `${data.percent}%`;
+            setupProgressText.textContent = `${data.percent}%`;
+            setupMessage.textContent = data.message;
+        });
+        
+        ipcRenderer.on('setup-complete', () => {
+            setupContainer.style.display = 'none';
+            gameContainer.style.display = 'block';
         });
         
         // Helper functions
