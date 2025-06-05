@@ -341,11 +341,32 @@ function startGame(sender) {
     }
   }
   
+  // First, ensure PyQt5 is installed
+  try {
+    sender.send('loading-progress', {
+      percent: 30,
+      message: 'Checking and installing dependencies...'
+    });
+    
+    // Run the PyQt5 installation script
+    const installPyQtScript = path.join(gamePath, 'install_pyqt.py');
+    if (fs.existsSync(installPyQtScript)) {
+      console.log('Running PyQt5 installation script...');
+      const installOutput = execSync(`"${pythonExecutable}" "${installPyQtScript}"`).toString();
+      console.log('Installation script output:', installOutput);
+    } else {
+      console.log('PyQt5 installation script not found at:', installPyQtScript);
+    }
+  } catch (error) {
+    console.error('Error installing PyQt5:', error);
+    // Continue anyway, as the launcher will try to install it if needed
+  }
+  
   // Simulate detailed loading progress
   const loadingSteps = [
-    { percent: 30, message: 'Loading game assets...' },
-    { percent: 50, message: 'Initializing graphics engine...' },
-    { percent: 70, message: 'Setting up camera for hand tracking...' },
+    { percent: 40, message: 'Loading game assets...' },
+    { percent: 60, message: 'Initializing graphics engine...' },
+    { percent: 80, message: 'Setting up camera for hand tracking...' },
     { percent: 90, message: 'Finalizing game setup...' }
   ];
   
@@ -374,9 +395,9 @@ function startGame(sender) {
   progressInterval = localInterval;
   
   try {
-    console.log('Starting game with tkinter launcher...');
+    console.log('Starting game with PyQt launcher...');
     
-    // Use the tkinter launcher for guaranteed window display
+    // Use the PyQt launcher for guaranteed window display
     const options = {
       mode: 'text',
       pythonPath: pythonExecutable,
@@ -384,7 +405,17 @@ function startGame(sender) {
       args: []
     };
     
-    pythonProcess = new PythonShell('tkinter_launcher.py', options);
+    // Use spawn instead of PythonShell for better process control
+    const pythonProcess = spawn(pythonExecutable, [path.join(gamePath, 'pyqt_launcher.py')], {
+      stdio: 'pipe',
+      detached: true // This is important for macOS to create a new process group
+    });
+    
+    // Unref the child process so it can run independently
+    pythonProcess.unref();
+    
+    // Set the global pythonProcess to null since we're not tracking it
+    // This allows the game to run independently of the Electron app
     isGameRunning = true;
     
     // Clear the interval when the game actually starts
@@ -415,88 +446,12 @@ function startGame(sender) {
       });
     }
     
-    pythonProcess.on('message', function(message) {
-      console.log('Game message:', message);
-      // Check if sender is still valid before sending message
-      if (sender && !sender.isDestroyed()) {
-        sender.send('game-output', message);
-      }
-    });
-    
-    pythonProcess.on('stderr', function(stderr) {
-      console.error('Game stderr:', stderr);
-      
-      // Log all stderr output for debugging
-      console.log('Python stderr:', stderr);
-    });
-    
-    pythonProcess.end(function (err, code, signal) {
-      console.log('Game process ended:', err, code, signal);
+    // Set a timeout to reset the game running state
+    // This is needed because we're not tracking the process
+    setTimeout(() => {
       isGameRunning = false;
-      if (err) {
-        console.error('Game error:', err);
-        
-        // If the tkinter launcher fails, try the simple test as a last resort
-        console.log('Trying simple test as last resort...');
-        
-        try {
-          pythonProcess = new PythonShell('simple_test.py', options);
-          isGameRunning = true;
-          
-          pythonProcess.on('message', function(message) {
-            console.log('Test message:', message);
-            // Check if sender is still valid before sending message
-            if (sender && !sender.isDestroyed()) {
-              sender.send('game-output', message);
-            }
-          });
-          
-          pythonProcess.on('stderr', function(stderr) {
-            console.error('Test stderr:', stderr);
-          });
-          
-          pythonProcess.end(function (err2, code2, signal2) {
-            console.log('Test process ended:', err2, code2, signal2);
-            isGameRunning = false;
-            
-            if (err2) {
-              // Check if sender is still valid before sending message
-              if (sender && !sender.isDestroyed()) {
-                sender.send('game-status', {
-                  status: 'error',
-                  message: `Game exited with error: ${err2.message || 'Unknown error'}`
-                });
-              }
-            } else {
-              // Check if sender is still valid before sending message
-              if (sender && !sender.isDestroyed()) {
-                sender.send('game-status', {
-                  status: 'ended',
-                  message: `Game ended successfully`
-                });
-              }
-            }
-          });
-        } catch (fallbackError) {
-          console.error('Failed to start test:', fallbackError);
-          // Check if sender is still valid before sending message
-          if (sender && !sender.isDestroyed()) {
-            sender.send('game-status', {
-              status: 'error',
-              message: `Failed to start game: ${fallbackError.message || 'Unknown error'}`
-            });
-          }
-        }
-      } else {
-        // Check if sender is still valid before sending message
-        if (sender && !sender.isDestroyed()) {
-          sender.send('game-status', {
-            status: 'ended',
-            message: `Game ended successfully`
-          });
-        }
-      }
-    });
+    }, 5000);
+    
   } catch (error) {
     // Clean up the interval if there's an error
     if (progressInterval) {
