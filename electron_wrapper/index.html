@@ -93,6 +93,12 @@
         .button.secondary:hover {
             background-color: #2980b9;
         }
+        .button.warning {
+            background-color: #e74c3c;
+        }
+        .button.warning:hover {
+            background-color: #c0392b;
+        }
         .status {
             margin-top: 20px;
             padding: 10px;
@@ -107,11 +113,22 @@
             background-color: rgba(231, 76, 60, 0.2);
             border: 1px solid #e74c3c;
         }
+        .status.warning {
+            background-color: rgba(241, 196, 15, 0.2);
+            border: 1px solid #f1c40f;
+        }
         .footer {
             background-color: #34495e;
             padding: 10px 20px;
             text-align: center;
             font-size: 14px;
+        }
+        .footer a {
+            color: #3498db;
+            text-decoration: none;
+        }
+        .footer a:hover {
+            text-decoration: underline;
         }
         .progress-container {
             width: 100%;
@@ -154,6 +171,11 @@
             max-height: 100px;
             overflow-y: auto;
         }
+        .button-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
     </style>
 </head>
 <body>
@@ -175,8 +197,11 @@
             <p class="game-description">
                 Welcome to Kill the VC, a thrilling hand gesture game where you battle against a fearsome Venture Capitalist (VC) using your very own spaceship! Control your ship and unleash lasers with intuitive hand movements detected via your webcam.
             </p>
-            <button class="button" id="startGameBtn">Start Game</button>
-            <button class="button secondary" id="checkDependenciesBtn">Check Dependencies</button>
+            <div class="button-container">
+                <button class="button" id="startGameBtn">Start Game</button>
+                <button class="button secondary" id="checkDependenciesBtn">Check Dependencies</button>
+                <button class="button warning" id="installDependenciesBtn" style="display: none;">Install Dependencies</button>
+            </div>
             <div class="status" id="statusMessage"></div>
             
             <div class="progress-container" id="progressContainer">
@@ -190,7 +215,7 @@
     </div>
     
     <div class="footer">
-        © 2025 ThePegasusAI. All rights reserved. Developed by Iman Jefferson. <a href="https://www.thepegasusai.com/" style="color: #3498db;">www.thepegasusai.com</a>
+        © 2025 ThePegasusAI. All rights reserved. Developed by Iman Jefferson. <a href="https://www.thepegasusai.com/" target="_blank">www.thepegasusai.com</a>
     </div>
     
     <script>
@@ -210,6 +235,13 @@
             ipcRenderer.send('check-dependencies');
         });
         
+        document.getElementById('installDependenciesBtn').addEventListener('click', () => {
+            showStatus('Installing dependencies...', 'success');
+            showProgressBar();
+            updateProgress(5, 'Preparing to install packages...');
+            ipcRenderer.send('install-dependencies');
+        });
+        
         document.getElementById('licenseBtn').addEventListener('click', () => {
             ipcRenderer.send('manage-license');
         });
@@ -223,17 +255,28 @@
         });
         
         ipcRenderer.on('dependencies-status', (event, data) => {
+            const installBtn = document.getElementById('installDependenciesBtn');
+            
             if (data.status === 'success') {
                 updateProgress(100, 'All dependencies verified successfully');
                 setTimeout(() => {
                     hideProgressBar();
                     showStatus('Dependencies check completed. All required packages are installed.', 'success');
+                    installBtn.style.display = 'none';
+                }, 1000);
+            } else if (data.status === 'missing') {
+                updateProgress(100, 'Missing dependencies detected');
+                setTimeout(() => {
+                    hideProgressBar();
+                    showStatus(`Missing dependencies detected. Please click "Install Dependencies" to fix.`, 'warning');
+                    installBtn.style.display = 'inline-block';
                 }, 1000);
             } else {
                 updateProgress(100, 'Error checking dependencies');
                 setTimeout(() => {
                     hideProgressBar();
-                    showStatus(`Error: ${data.message}. Please click "Check Dependencies" to install missing packages.`, 'error');
+                    showStatus(`Error: ${data.message}`, 'error');
+                    installBtn.style.display = 'inline-block';
                 }, 1000);
             }
         });
@@ -243,7 +286,14 @@
                 updateProgress(100, 'Installation complete');
                 setTimeout(() => {
                     hideProgressBar();
-                    showStatus('Dependencies installed successfully.', 'success');
+                    showStatus('Dependencies installed successfully. You can now start the game.', 'success');
+                    document.getElementById('installDependenciesBtn').style.display = 'none';
+                }, 1000);
+            } else if (data.status === 'partial') {
+                updateProgress(100, 'Installation partially complete');
+                setTimeout(() => {
+                    hideProgressBar();
+                    showStatus(`${data.message}`, 'warning');
                 }, 1000);
             } else {
                 updateProgress(100, 'Installation failed');
@@ -269,6 +319,11 @@
                 setTimeout(() => {
                     hideProgressBar();
                     showStatus(`Error: ${data.message}`, 'error');
+                    
+                    // If the error is about missing dependencies, show the install button
+                    if (data.message.includes('Missing') || data.message.includes('module')) {
+                        document.getElementById('installDependenciesBtn').style.display = 'inline-block';
+                    }
                 }, 1000);
             }
         });
@@ -308,6 +363,13 @@
                 loadingDetails.innerHTML = `${now}: ${message}<br>` + loadingDetails.innerHTML;
             }
         }
+        
+        // Check dependencies on page load
+        window.addEventListener('DOMContentLoaded', () => {
+            setTimeout(() => {
+                ipcRenderer.send('check-dependencies');
+            }, 1000);
+        });
     </script>
 </body>
 </html>

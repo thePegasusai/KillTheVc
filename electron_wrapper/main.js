@@ -3,21 +3,72 @@ const path = require('path');
 const { PythonShell } = require('python-shell');
 const fs = require('fs');
 const os = require('os');
+const { execSync } = require('child_process');
 
 let mainWindow;
 let pythonProcess;
 let isGameRunning = false;
 let agreedToTerms = false;
 let licenseData = null;
+let dependencyCheckInProgress = false;
+let dependencyInstallInProgress = false;
 
 // Determine the correct Python executable based on platform
 function getPythonExecutable() {
-  if (process.platform === 'darwin') {
-    return 'python3';
-  } else if (process.platform === 'win32') {
-    return 'python';
-  } else {
-    return 'python3';
+  const platform = process.platform;
+  
+  try {
+    if (platform === 'darwin') {
+      // Try python3 first on macOS
+      try {
+        execSync('which python3');
+        return 'python3';
+      } catch (e) {
+        try {
+          execSync('which python');
+          return 'python';
+        } catch (e2) {
+          dialog.showErrorBox('Python Not Found', 
+            'Python is not installed or not in your PATH. Please install Python 3.7 or later.');
+          return null;
+        }
+      }
+    } else if (platform === 'win32') {
+      // Try python on Windows
+      try {
+        execSync('where python');
+        return 'python';
+      } catch (e) {
+        try {
+          execSync('where py');
+          return 'py';
+        } catch (e2) {
+          dialog.showErrorBox('Python Not Found', 
+            'Python is not installed or not in your PATH. Please install Python 3.7 or later.');
+          return null;
+        }
+      }
+    } else {
+      // Linux or other
+      try {
+        execSync('which python3');
+        return 'python3';
+      } catch (e) {
+        try {
+          execSync('which python');
+          return 'python';
+        } catch (e2) {
+          dialog.showErrorBox('Python Not Found', 
+            'Python is not installed or not in your PATH. Please install Python 3.7 or later.');
+          return null;
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Error detecting Python:', error);
+    dialog.showErrorBox('Python Detection Error', 
+      'An error occurred while detecting Python. Please make sure Python 3.7 or later is installed.');
+    return null;
   }
 }
 
@@ -115,6 +166,14 @@ app.on('ready', async () => {
   const logoSource = path.join(__dirname, '../branding/pegasus_logo.png');
   const logoDestination = path.join(__dirname, 'assets/pegasus_logo.png');
   
+  if (fs.existsSync(logoSource) && !fs.existsSync(path.dirname(logoDestination))) {
+    try {
+      fs.mkdirSync(path.dirname(logoDestination), { recursive: true });
+    } catch (error) {
+      console.error('Error creating assets directory:', error);
+    }
+  }
+  
   if (fs.existsSync(logoSource) && !fs.existsSync(logoDestination)) {
     try {
       fs.copyFileSync(logoSource, logoDestination);
@@ -158,6 +217,9 @@ app.on('ready', async () => {
   if (!hasLicense) {
     await showActivationWindow();
   }
+  
+  // Check dependencies automatically on startup
+  checkDependencies(mainWindow.webContents);
 });
 
 app.on('window-all-closed', function() {
@@ -173,19 +235,43 @@ app.on('activate', function() {
 });
 
 // Check if Python is installed and install dependencies
-ipcMain.on('check-dependencies', (event) => {
+function checkDependencies(sender) {
+  if (dependencyCheckInProgress) {
+    sender.send('loading-progress', {
+      percent: 50,
+      message: 'Dependency check already in progress...'
+    });
+    return;
+  }
+  
+  dependencyCheckInProgress = true;
   const pythonPath = path.join(__dirname, 'python');
   
   // Send initial progress update
-  event.sender.send('loading-progress', {
+  sender.send('loading-progress', {
     percent: 10,
     message: 'Checking Python installation...'
   });
   
+  const pythonExecutable = getPythonExecutable();
+  if (!pythonExecutable) {
+    dependencyCheckInProgress = false;
+    sender.send('loading-progress', {
+      percent: 100,
+      message: 'Error: Python not found. Please install Python 3.7 or later.'
+    });
+    
+    sender.send('dependencies-status', {
+      status: 'error',
+      message: 'Python not found. Please install Python 3.7 or later.'
+    });
+    return;
+  }
+  
   // Run the dependency check script
   const options = {
     mode: 'text',
-    pythonPath: getPythonExecutable(),
+    pythonPath: pythonExecutable,
     scriptPath: pythonPath,
     args: []
   };
@@ -195,7 +281,7 @@ ipcMain.on('check-dependencies', (event) => {
   const progressInterval = setInterval(() => {
     progress += 5;
     if (progress <= 90) {
-      event.sender.send('loading-progress', {
+      sender.send('loading-progress', {
         percent: progress,
         message: `Checking dependency ${Math.floor((progress-10)/5) + 1} of 16...`
       });
@@ -206,45 +292,94 @@ ipcMain.on('check-dependencies', (event) => {
   
   PythonShell.run('check_dependencies.py', options, function (err, results) {
     clearInterval(progressInterval);
+    dependencyCheckInProgress = false;
     
     if (err) {
-      event.sender.send('loading-progress', {
+      console.error('Error checking dependencies:', err);
+      
+      sender.send('loading-progress', {
         percent: 100,
         message: `Error: ${err.message}`
       });
       
-      event.sender.send('dependencies-status', {
-        status: 'error',
-        message: `Error checking dependencies: ${err.message}`
-      });
+      // Check if the error is about missing modules
+      if (err.message.includes('ModuleNotFoundError') || err.message.includes('ImportError')) {
+        sender.send('dependencies-status', {
+          status: 'missing',
+          message: `Missing dependencies detected. Click "Install Dependencies" to fix.`
+        });
+      } else {
+        sender.send('dependencies-status', {
+          status: 'error',
+          message: `Error checking dependencies: ${err.message}`
+        });
+      }
       return;
     }
     
-    event.sender.send('loading-progress', {
-      percent: 100,
-      message: 'All dependencies verified successfully!'
-    });
-    
-    event.sender.send('dependencies-status', {
-      status: 'success',
-      message: 'Dependencies check completed'
-    });
+    // Check if any dependencies are missing from the output
+    const output = results ? results.join('\\n') : '';
+    if (output.includes('Missing packages') || output.includes('NOT installed')) {
+      sender.send('loading-progress', {
+        percent: 100,
+        message: 'Missing dependencies detected. Click "Install Dependencies" to fix.'
+      });
+      
+      sender.send('dependencies-status', {
+        status: 'missing',
+        message: 'Missing dependencies detected. Click "Install Dependencies" to fix.'
+      });
+    } else {
+      sender.send('loading-progress', {
+        percent: 100,
+        message: 'All dependencies verified successfully!'
+      });
+      
+      sender.send('dependencies-status', {
+        status: 'success',
+        message: 'All dependencies are installed and ready to use.'
+      });
+    }
   });
-});
+}
 
 // Install dependencies if needed
-ipcMain.on('install-dependencies', (event) => {
+function installDependencies(sender) {
+  if (dependencyInstallInProgress) {
+    sender.send('loading-progress', {
+      percent: 50,
+      message: 'Installation already in progress...'
+    });
+    return;
+  }
+  
+  dependencyInstallInProgress = true;
   const pythonPath = path.join(__dirname, 'python');
   
   // Send initial progress update
-  event.sender.send('loading-progress', {
+  sender.send('loading-progress', {
     percent: 5,
     message: 'Preparing to install dependencies...'
   });
   
+  const pythonExecutable = getPythonExecutable();
+  if (!pythonExecutable) {
+    dependencyInstallInProgress = false;
+    sender.send('loading-progress', {
+      percent: 100,
+      message: 'Error: Python not found. Please install Python 3.7 or later.'
+    });
+    
+    sender.send('installation-status', {
+      status: 'error',
+      message: 'Python not found. Please install Python 3.7 or later.'
+    });
+    return;
+  }
+  
   const options = {
     mode: 'text',
-    pythonPath: getPythonExecutable(),
+    pythonPath: pythonExecutable,
     scriptPath: pythonPath,
     args: []
   };
@@ -255,7 +390,7 @@ ipcMain.on('install-dependencies', (event) => {
   
   const progressInterval = setInterval(() => {
     const depProgress = Math.min(currentDep / dependencies.length * 100, 95);
-    event.sender.send('loading-progress', {
+    sender.send('loading-progress', {
       percent: depProgress,
       message: `Installing ${dependencies[currentDep % dependencies.length]}...`
     });
@@ -264,36 +399,58 @@ ipcMain.on('install-dependencies', (event) => {
   
   PythonShell.run('install_dependencies.py', options, function (err, results) {
     clearInterval(progressInterval);
+    dependencyInstallInProgress = false;
     
     if (err) {
-      event.sender.send('loading-progress', {
+      console.error('Error installing dependencies:', err);
+      
+      sender.send('loading-progress', {
         percent: 100,
         message: `Error: ${err.message}`
       });
       
-      event.sender.send('installation-status', {
+      sender.send('installation-status', {
         status: 'error',
         message: `Error installing dependencies: ${err.message}`
       });
       return;
     }
     
-    event.sender.send('loading-progress', {
-      percent: 100,
-      message: 'All dependencies installed successfully!'
-    });
+    // Check if installation was successful
+    const output = results ? results.join('\\n') : '';
+    if (output.includes('could not be installed') || output.includes('Failed to install')) {
+      sender.send('loading-progress', {
+        percent: 100,
+        message: 'Some dependencies could not be installed. Please install them manually.'
+      });
+      
+      sender.send('installation-status', {
+        status: 'partial',
+        message: 'Some dependencies could not be installed. Please install them manually using pip.'
+      });
+    } else {
+      sender.send('loading-progress', {
+        percent: 100,
+        message: 'All dependencies installed successfully!'
+      });
+      
+      sender.send('installation-status', {
+        status: 'success',
+        message: 'All dependencies installed successfully! You can now start the game.'
+      });
+    }
     
-    event.sender.send('installation-status', {
-      status: 'success',
-      message: 'Dependencies installed successfully'
-    });
+    // Re-check dependencies after installation
+    setTimeout(() => {
+      checkDependencies(sender);
+    }, 1000);
   });
-});
+}
 
 // Start the game
-ipcMain.on('start-game', (event) => {
+function startGame(sender) {
   if (isGameRunning) {
-    event.sender.send('game-status', {
+    sender.send('game-status', {
       status: 'error',
       message: 'Game is already running'
     });
@@ -303,14 +460,28 @@ ipcMain.on('start-game', (event) => {
   const pythonPath = path.join(__dirname, 'python');
   
   // Send initial progress update
-  event.sender.send('loading-progress', {
+  sender.send('loading-progress', {
     percent: 10,
     message: 'Initializing game engine...'
   });
   
+  const pythonExecutable = getPythonExecutable();
+  if (!pythonExecutable) {
+    sender.send('loading-progress', {
+      percent: 100,
+      message: 'Error: Python not found. Please install Python 3.7 or later.'
+    });
+    
+    sender.send('game-status', {
+      status: 'error',
+      message: 'Python not found. Please install Python 3.7 or later.'
+    });
+    return;
+  }
+  
   const options = {
     mode: 'text',
-    pythonPath: getPythonExecutable(),
+    pythonPath: pythonExecutable,
     scriptPath: pythonPath,
     args: []
   };
@@ -331,7 +502,7 @@ ipcMain.on('start-game', (event) => {
   let stepIndex = 0;
   const progressInterval = setInterval(() => {
     if (stepIndex < loadingSteps.length) {
-      event.sender.send('loading-progress', loadingSteps[stepIndex]);
+      sender.send('loading-progress', loadingSteps[stepIndex]);
       stepIndex++;
     } else {
       clearInterval(progressInterval);
@@ -345,30 +516,53 @@ ipcMain.on('start-game', (event) => {
     // Clear the interval when the game actually starts
     setTimeout(() => {
       clearInterval(progressInterval);
-      event.sender.send('loading-progress', {
+      sender.send('loading-progress', {
         percent: 100,
         message: 'Game started successfully!'
       });
     }, 4000);
     
-    event.sender.send('game-status', {
+    sender.send('game-status', {
       status: 'started',
       message: 'Game started successfully'
     });
     
     pythonProcess.on('message', function(message) {
-      event.sender.send('game-output', message);
+      sender.send('game-output', message);
+    });
+    
+    pythonProcess.on('stderr', function(stderr) {
+      console.error('Game stderr:', stderr);
+      
+      // Check for common errors
+      if (stderr.includes('ModuleNotFoundError') || stderr.includes('ImportError')) {
+        sender.send('game-status', {
+          status: 'error',
+          message: `Missing Python module. Please click "Check Dependencies" to fix.`
+        });
+      }
     });
     
     pythonProcess.end(function (err, code, signal) {
       isGameRunning = false;
       if (err) {
-        event.sender.send('game-status', {
-          status: 'error',
-          message: `Game exited with error: ${err.message}`
-        });
+        console.error('Game error:', err);
+        
+        // Check for common errors
+        if (err.message.includes('ModuleNotFoundError: No module named')) {
+          const moduleName = err.message.split("'")[1];
+          sender.send('game-status', {
+            status: 'error',
+            message: `Error: Missing Python module '${moduleName}'. Click "Check Dependencies" to fix.`
+          });
+        } else {
+          sender.send('game-status', {
+            status: 'error',
+            message: `Game exited with error: ${err.message}`
+          });
+        }
       } else {
-        event.sender.send('game-status', {
+        sender.send('game-status', {
           status: 'ended',
           message: `Game ended with code: ${code}`
         });
@@ -376,16 +570,31 @@ ipcMain.on('start-game', (event) => {
     });
   } catch (error) {
     clearInterval(progressInterval);
-    event.sender.send('loading-progress', {
+    console.error('Failed to start game:', error);
+    
+    sender.send('loading-progress', {
       percent: 100,
       message: `Error: ${error.message}`
     });
     
-    event.sender.send('game-status', {
+    sender.send('game-status', {
       status: 'error',
       message: `Failed to start game: ${error.message}`
     });
   }
+}
+
+// Register IPC handlers
+ipcMain.on('check-dependencies', (event) => {
+  checkDependencies(event.sender);
+});
+
+ipcMain.on('install-dependencies', (event) => {
+  installDependencies(event.sender);
+});
+
+ipcMain.on('start-game', (event) => {
+  startGame(event.sender);
 });
 
 // Open license management
