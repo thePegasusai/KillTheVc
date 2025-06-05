@@ -87,6 +87,16 @@
         .button:hover {
             background-color: #27ae60;
         }
+        .button.secondary {
+            background-color: #3498db;
+        }
+        .button.secondary:hover {
+            background-color: #2980b9;
+        }
+        .button:disabled {
+            background-color: #95a5a6;
+            cursor: not-allowed;
+        }
         .status {
             margin-top: 20px;
             padding: 10px;
@@ -164,6 +174,26 @@
             flex-wrap: wrap;
             justify-content: center;
         }
+        .error-details {
+            margin-top: 20px;
+            background-color: #2c3e50;
+            border-radius: 4px;
+            padding: 10px;
+            text-align: left;
+            max-height: 200px;
+            overflow-y: auto;
+            display: none;
+        }
+        .error-details pre {
+            margin: 0;
+            white-space: pre-wrap;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .fallback-options {
+            margin-top: 20px;
+            display: none;
+        }
     </style>
 </head>
 <body>
@@ -188,6 +218,15 @@
             <div class="button-container">
                 <button class="button" id="startGameBtn">Start Game</button>
             </div>
+            
+            <div class="fallback-options" id="fallbackOptions">
+                <p>Having trouble? Try these alternatives:</p>
+                <div class="button-container">
+                    <button class="button secondary" id="simpleModeBtn">Simple Mode (No Webcam)</button>
+                    <button class="button secondary" id="debugModeBtn">Run Diagnostics</button>
+                </div>
+            </div>
+            
             <div class="status" id="statusMessage"></div>
             
             <div class="progress-container" id="progressContainer">
@@ -196,6 +235,10 @@
                     <div class="progress-text" id="progressText">0%</div>
                 </div>
                 <div class="loading-details" id="loadingDetails"></div>
+            </div>
+            
+            <div class="error-details" id="errorDetails">
+                <pre id="errorLog"></pre>
             </div>
         </div>
     </div>
@@ -207,11 +250,33 @@
     <script>
         const { ipcRenderer } = require('electron');
         
-        document.getElementById('startGameBtn').addEventListener('click', () => {
-            showStatus('Starting game...', 'success');
-            showProgressBar();
-            updateProgress(5, 'Initializing game components...');
-            ipcRenderer.send('start-game');
+        // Elements
+        const startGameBtn = document.getElementById('startGameBtn');
+        const simpleModeBtn = document.getElementById('simpleModeBtn');
+        const debugModeBtn = document.getElementById('debugModeBtn');
+        const statusMessage = document.getElementById('statusMessage');
+        const progressContainer = document.getElementById('progressContainer');
+        const progressFill = document.getElementById('progressFill');
+        const progressText = document.getElementById('progressText');
+        const loadingDetails = document.getElementById('loadingDetails');
+        const errorDetails = document.getElementById('errorDetails');
+        const errorLog = document.getElementById('errorLog');
+        const fallbackOptions = document.getElementById('fallbackOptions');
+        
+        // Error log storage
+        let fullErrorLog = '';
+        
+        // Button event listeners
+        startGameBtn.addEventListener('click', () => {
+            startGame('normal');
+        });
+        
+        simpleModeBtn.addEventListener('click', () => {
+            startGame('simple');
+        });
+        
+        debugModeBtn.addEventListener('click', () => {
+            startGame('debug');
         });
         
         document.getElementById('licenseBtn').addEventListener('click', () => {
@@ -226,6 +291,37 @@
             ipcRenderer.send('show-about');
         });
         
+        // Start game function
+        function startGame(mode) {
+            // Reset UI
+            resetUI();
+            
+            // Show progress
+            showStatus('Starting game...', 'success');
+            showProgressBar();
+            updateProgress(5, 'Initializing game components...');
+            
+            // Disable buttons
+            startGameBtn.disabled = true;
+            if (simpleModeBtn) simpleModeBtn.disabled = true;
+            if (debugModeBtn) debugModeBtn.disabled = true;
+            
+            // Clear error log
+            fullErrorLog = '';
+            errorLog.textContent = '';
+            errorDetails.style.display = 'none';
+            
+            // Send appropriate IPC message based on mode
+            if (mode === 'simple') {
+                ipcRenderer.send('start-simple-game');
+            } else if (mode === 'debug') {
+                ipcRenderer.send('run-diagnostics');
+            } else {
+                ipcRenderer.send('start-game');
+            }
+        }
+        
+        // IPC event listeners
         ipcRenderer.on('game-status', (event, data) => {
             if (data.status === 'started') {
                 updateProgress(100, 'Game started successfully');
@@ -236,42 +332,69 @@
             } else if (data.status === 'ended') {
                 hideProgressBar();
                 showStatus('Game ended.', 'success');
-            } else {
+                enableButtons();
+            } else if (data.status === 'error') {
                 updateProgress(100, 'Error starting game');
                 setTimeout(() => {
                     hideProgressBar();
-                    showStatus(`Something went wrong. Please try again.`, 'error');
+                    showStatus(data.message || 'Something went wrong. Please try again.', 'error');
+                    
+                    // Show fallback options
+                    fallbackOptions.style.display = 'block';
+                    
+                    // Add to error log
+                    addToErrorLog(data.message || 'Unknown error');
+                    
+                    // Show error details
+                    errorDetails.style.display = 'block';
+                    
+                    enableButtons();
                 }, 1000);
             }
         });
         
         ipcRenderer.on('loading-progress', (event, data) => {
             updateProgress(data.percent, data.message);
+            
+            // Add warnings and errors to the log
+            if (data.message && (data.message.includes('ERROR:') || data.message.includes('WARNING:'))) {
+                addToErrorLog(data.message);
+            }
         });
         
+        ipcRenderer.on('diagnostic-result', (event, data) => {
+            hideProgressBar();
+            
+            if (data.success) {
+                showStatus('Diagnostics completed successfully. Try starting the game now.', 'success');
+            } else {
+                showStatus('Diagnostics found issues. See details below.', 'error');
+                addToErrorLog(data.details || 'No specific issues found');
+                errorDetails.style.display = 'block';
+            }
+            
+            enableButtons();
+        });
+        
+        // Helper functions
         function showStatus(message, type) {
-            const statusElement = document.getElementById('statusMessage');
-            statusElement.textContent = message;
-            statusElement.className = `status ${type}`;
-            statusElement.style.display = 'block';
+            statusMessage.textContent = message;
+            statusMessage.className = `status ${type}`;
+            statusMessage.style.display = 'block';
         }
         
         function showProgressBar() {
-            document.getElementById('progressContainer').style.display = 'block';
-            document.getElementById('progressFill').style.width = '0%';
-            document.getElementById('progressText').textContent = '0%';
-            document.getElementById('loadingDetails').textContent = '';
+            progressContainer.style.display = 'block';
+            progressFill.style.width = '0%';
+            progressText.textContent = '0%';
+            loadingDetails.textContent = '';
         }
         
         function hideProgressBar() {
-            document.getElementById('progressContainer').style.display = 'none';
+            progressContainer.style.display = 'none';
         }
         
         function updateProgress(percent, message) {
-            const progressFill = document.getElementById('progressFill');
-            const progressText = document.getElementById('progressText');
-            const loadingDetails = document.getElementById('loadingDetails');
-            
             progressFill.style.width = `${percent}%`;
             progressText.textContent = `${percent}%`;
             
@@ -279,6 +402,26 @@
                 const now = new Date().toLocaleTimeString();
                 loadingDetails.innerHTML = `${now}: ${message}<br>` + loadingDetails.innerHTML;
             }
+        }
+        
+        function addToErrorLog(message) {
+            if (message) {
+                const now = new Date().toLocaleTimeString();
+                fullErrorLog = `${now}: ${message}\n` + fullErrorLog;
+                errorLog.textContent = fullErrorLog;
+            }
+        }
+        
+        function enableButtons() {
+            startGameBtn.disabled = false;
+            if (simpleModeBtn) simpleModeBtn.disabled = false;
+            if (debugModeBtn) debugModeBtn.disabled = false;
+        }
+        
+        function resetUI() {
+            statusMessage.style.display = 'none';
+            progressContainer.style.display = 'none';
+            errorDetails.style.display = 'none';
         }
     </script>
 </body>

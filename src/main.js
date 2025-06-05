@@ -438,9 +438,248 @@ function startGame(sender) {
   }
 }
 
-// Register IPC handlers
+// Start the simple game (no webcam version)
+function startSimpleGame(sender) {
+  if (isGameRunning) {
+    sender.send('game-status', {
+      status: 'error',
+      message: 'Game is already running'
+    });
+    return;
+  }
+  
+  const gamePath = path.join(__dirname, 'game');
+  
+  // Send initial progress update
+  sender.send('loading-progress', {
+    percent: 10,
+    message: 'Initializing simple game mode...'
+  });
+  
+  const pythonExecutable = getBundledPythonPath();
+  if (!pythonExecutable) {
+    sender.send('loading-progress', {
+      percent: 100,
+      message: 'Could not find Python. Please make sure Python is installed.'
+    });
+    
+    sender.send('game-status', {
+      status: 'error',
+      message: 'Could not find Python. Please make sure Python is installed.'
+    });
+    return;
+  }
+  
+  console.log('Using Python executable:', pythonExecutable);
+  console.log('Game path:', gamePath);
+  
+  // Simulate loading progress
+  const loadingSteps = [
+    { percent: 30, message: 'Loading simple game assets...' },
+    { percent: 60, message: 'Initializing game engine...' },
+    { percent: 90, message: 'Preparing game environment...' }
+  ];
+  
+  let stepIndex = 0;
+  const progressInterval = setInterval(() => {
+    if (stepIndex < loadingSteps.length) {
+      sender.send('loading-progress', loadingSteps[stepIndex]);
+      stepIndex++;
+    } else {
+      clearInterval(progressInterval);
+    }
+  }, 400);
+  
+  try {
+    console.log('Starting simple game...');
+    
+    // Start the simple game version
+    const options = {
+      mode: 'text',
+      pythonPath: pythonExecutable,
+      scriptPath: gamePath,
+      args: []
+    };
+    
+    pythonProcess = new PythonShell('simple_game.py', options);
+    isGameRunning = true;
+    
+    // Clear the interval when the game actually starts
+    setTimeout(() => {
+      clearInterval(progressInterval);
+      sender.send('loading-progress', {
+        percent: 100,
+        message: 'Simple game started successfully!'
+      });
+    }, 2000);
+    
+    sender.send('game-status', {
+      status: 'started',
+      message: 'Simple game started successfully'
+    });
+    
+    pythonProcess.on('message', function(message) {
+      console.log('Game message:', message);
+      sender.send('game-output', message);
+    });
+    
+    pythonProcess.on('stderr', function(stderr) {
+      console.error('Game stderr:', stderr);
+    });
+    
+    pythonProcess.end(function (err, code, signal) {
+      console.log('Game process ended:', err, code, signal);
+      isGameRunning = false;
+      if (err) {
+        console.error('Game error:', err);
+        sender.send('game-status', {
+          status: 'error',
+          message: `Game exited with error: ${err.message || 'Unknown error'}`
+        });
+      } else {
+        sender.send('game-status', {
+          status: 'ended',
+          message: `Game ended successfully`
+        });
+      }
+    });
+  } catch (error) {
+    clearInterval(progressInterval);
+    console.error('Failed to start simple game:', error);
+    
+    sender.send('loading-progress', {
+      percent: 100,
+      message: `Error: ${error.message || 'Unknown error'}`
+    });
+    
+    sender.send('game-status', {
+      status: 'error',
+      message: `Failed to start simple game: ${error.message || 'Unknown error'}`
+    });
+  }
+}
+
+// Run diagnostics
+function runDiagnostics(sender) {
+  const gamePath = path.join(__dirname, 'game');
+  
+  // Send initial progress update
+  sender.send('loading-progress', {
+    percent: 10,
+    message: 'Starting diagnostic checks...'
+  });
+  
+  const pythonExecutable = getBundledPythonPath();
+  if (!pythonExecutable) {
+    sender.send('loading-progress', {
+      percent: 100,
+      message: 'Could not find Python. Please make sure Python is installed.'
+    });
+    
+    sender.send('diagnostic-result', {
+      success: false,
+      details: 'Could not find Python. Please make sure Python is installed.'
+    });
+    return;
+  }
+  
+  console.log('Using Python executable:', pythonExecutable);
+  
+  // Simulate loading progress
+  const loadingSteps = [
+    { percent: 20, message: 'Checking Python environment...' },
+    { percent: 40, message: 'Checking dependencies...' },
+    { percent: 60, message: 'Checking webcam access...' },
+    { percent: 80, message: 'Checking game assets...' }
+  ];
+  
+  let stepIndex = 0;
+  const progressInterval = setInterval(() => {
+    if (stepIndex < loadingSteps.length) {
+      sender.send('loading-progress', loadingSteps[stepIndex]);
+      stepIndex++;
+    } else {
+      clearInterval(progressInterval);
+    }
+  }, 400);
+  
+  try {
+    console.log('Running diagnostics...');
+    
+    // Run the diagnostic script
+    const options = {
+      mode: 'json',
+      pythonPath: pythonExecutable,
+      scriptPath: gamePath,
+      args: []
+    };
+    
+    const diagnosticProcess = new PythonShell('diagnostic.py', options);
+    
+    diagnosticProcess.on('message', function(results) {
+      console.log('Diagnostic results:', results);
+      
+      clearInterval(progressInterval);
+      sender.send('loading-progress', {
+        percent: 100,
+        message: 'Diagnostics completed'
+      });
+      
+      sender.send('diagnostic-result', {
+        success: results.success,
+        details: results.details
+      });
+    });
+    
+    diagnosticProcess.on('stderr', function(stderr) {
+      console.error('Diagnostic stderr:', stderr);
+    });
+    
+    diagnosticProcess.end(function (err, code, signal) {
+      console.log('Diagnostic process ended:', err, code, signal);
+      
+      if (err) {
+        clearInterval(progressInterval);
+        console.error('Diagnostic error:', err);
+        
+        sender.send('loading-progress', {
+          percent: 100,
+          message: `Diagnostic error: ${err.message || 'Unknown error'}`
+        });
+        
+        sender.send('diagnostic-result', {
+          success: false,
+          details: `Diagnostic error: ${err.message || 'Unknown error'}`
+        });
+      }
+    });
+  } catch (error) {
+    clearInterval(progressInterval);
+    console.error('Failed to run diagnostics:', error);
+    
+    sender.send('loading-progress', {
+      percent: 100,
+      message: `Error: ${error.message || 'Unknown error'}`
+    });
+    
+    sender.send('diagnostic-result', {
+      success: false,
+      details: `Failed to run diagnostics: ${error.message || 'Unknown error'}`
+    });
+  }
+}
+
+// IPC handlers for game modes
 ipcMain.on('start-game', (event) => {
   startGame(event.sender);
+});
+
+ipcMain.on('start-simple-game', (event) => {
+  startSimpleGame(event.sender);
+});
+
+ipcMain.on('run-diagnostics', (event) => {
+  runDiagnostics(event.sender);
 });
 
 // Open license management
