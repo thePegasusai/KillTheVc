@@ -4,6 +4,7 @@ const { PythonShell } = require('python-shell');
 const fs = require('fs');
 const os = require('os');
 const { execSync } = require('child_process');
+const { fixPythonPaths } = require('./python_fix');
 
 let mainWindow;
 let pythonProcess;
@@ -178,6 +179,26 @@ function createWindow() {
 }
 
 app.on('ready', async () => {
+  // Fix Python paths for macOS
+  if (process.platform === 'darwin') {
+    try {
+      const appPath = app.getAppPath();
+      console.log('App path for Python fix:', appPath);
+      
+      // For development environment
+      if (appPath.includes('Resources/app')) {
+        // We're in a bundled app
+        const bundledAppPath = appPath.split('Resources/app')[0];
+        fixPythonPaths(bundledAppPath);
+      } else {
+        // We're in development mode, will fix paths when bundled
+        console.log('Development mode detected, Python paths will be fixed during packaging');
+      }
+    } catch (error) {
+      console.error('Error fixing Python paths:', error);
+    }
+  }
+  
   // Copy the ThePegasusAI logo to the assets directory if it doesn't exist
   const logoSource = path.join(__dirname, '../branding/pegasus_logo.png');
   const logoDestination = path.join(__dirname, 'assets/pegasus_logo.png');
@@ -282,149 +303,102 @@ function startGame(sender) {
   console.log('Using Python executable:', pythonExecutable);
   console.log('Game path:', gamePath);
   
-  // First run the debug script to check everything
-  const debugOptions = {
-    mode: 'text',
-    pythonPath: pythonExecutable,
-    scriptPath: gamePath,
-    args: []
-  };
-  
-  console.log('Running debug checks...');
-  
-  try {
-    // Run the debug script first
-    const debugProcess = new PythonShell('game_debug.py', debugOptions);
-    
-    sender.send('loading-progress', {
-      percent: 20,
-      message: 'Running system checks...'
-    });
-    
-    let debugOutput = '';
-    
-    debugProcess.on('message', function(message) {
-      console.log('Debug message:', message);
-      debugOutput += message + '\n';
-    });
-    
-    debugProcess.on('stderr', function(stderr) {
-      console.error('Debug stderr:', stderr);
-      debugOutput += 'ERROR: ' + stderr + '\n';
-    });
-    
-    debugProcess.end(function(err, code, signal) {
-      console.log('Debug process ended:', err, code, signal);
-      
-      if (err || code !== 0) {
-        console.error('Debug checks failed:', err);
-        sender.send('loading-progress', {
-          percent: 100,
-          message: 'System checks failed. See error details.'
-        });
-        
-        sender.send('game-status', {
-          status: 'error',
-          message: `System checks failed: ${debugOutput || err?.message || 'Unknown error'}`
-        });
-        return;
-      }
-      
-      // Debug checks passed, now run the actual game
-      console.log('Debug checks passed, starting game...');
+  // Fix Python paths on macOS
+  if (process.platform === 'darwin') {
+    try {
       sender.send('loading-progress', {
-        percent: 40,
-        message: 'System checks passed. Starting game...'
+        percent: 20,
+        message: 'Fixing Python paths for macOS...'
       });
       
-      // Simulate detailed loading progress
-      const loadingSteps = [
-        { percent: 50, message: 'Loading game assets...' },
-        { percent: 60, message: 'Initializing graphics engine...' },
-        { percent: 70, message: 'Setting up camera for hand tracking...' },
-        { percent: 80, message: 'Preparing game environment...' },
-        { percent: 90, message: 'Finalizing game setup...' }
-      ];
-      
-      let stepIndex = 0;
-      const progressInterval = setInterval(() => {
-        if (stepIndex < loadingSteps.length) {
-          sender.send('loading-progress', loadingSteps[stepIndex]);
-          stepIndex++;
-        } else {
-          clearInterval(progressInterval);
-        }
-      }, 400);
-      
-      // Now start the actual game using the simple launcher
-      const gameOptions = {
-        mode: 'text',
-        pythonPath: pythonExecutable,
-        scriptPath: gamePath,
-        args: []
-      };
-      
-      try {
-        console.log('Starting game with simple launcher...');
-        pythonProcess = new PythonShell('simple_launcher.py', gameOptions);
-        isGameRunning = true;
-        
-        // Clear the interval when the game actually starts
-        setTimeout(() => {
-          clearInterval(progressInterval);
-          sender.send('loading-progress', {
-            percent: 100,
-            message: 'Game started successfully!'
-          });
-        }, 2000);
-        
-        sender.send('game-status', {
-          status: 'started',
-          message: 'Game started successfully'
-        });
-        
-        pythonProcess.on('message', function(message) {
-          console.log('Game message:', message);
-          sender.send('game-output', message);
-        });
-        
-        pythonProcess.on('stderr', function(stderr) {
-          console.error('Game stderr:', stderr);
-        });
-        
-        pythonProcess.end(function (err, code, signal) {
-          console.log('Game process ended:', err, code, signal);
-          isGameRunning = false;
-          if (err) {
-            console.error('Game error:', err);
-            sender.send('game-status', {
-              status: 'error',
-              message: `Game exited with error: ${err.message || 'Unknown error'}`
-            });
-          } else {
-            sender.send('game-status', {
-              status: 'ended',
-              message: `Game ended successfully`
-            });
-          }
-        });
-      } catch (error) {
-        clearInterval(progressInterval);
-        console.error('Failed to start game:', error);
-        
-        sender.send('loading-progress', {
-          percent: 100,
-          message: `Error: ${error.message || 'Unknown error'}`
-        });
-        
+      // Run the fix_python_paths.sh script
+      const fixScriptPath = path.join(__dirname, 'fix_python_paths.sh');
+      if (fs.existsSync(fixScriptPath)) {
+        console.log('Running Python path fix script...');
+        const fixOutput = execSync(fixScriptPath).toString();
+        console.log('Fix script output:', fixOutput);
+      } else {
+        console.log('Fix script not found at:', fixScriptPath);
+      }
+    } catch (error) {
+      console.error('Error fixing Python paths:', error);
+    }
+  }
+  
+  // Simulate detailed loading progress
+  const loadingSteps = [
+    { percent: 30, message: 'Loading game assets...' },
+    { percent: 50, message: 'Initializing graphics engine...' },
+    { percent: 70, message: 'Setting up camera for hand tracking...' },
+    { percent: 90, message: 'Finalizing game setup...' }
+  ];
+  
+  let stepIndex = 0;
+  const progressInterval = setInterval(() => {
+    if (stepIndex < loadingSteps.length) {
+      sender.send('loading-progress', loadingSteps[stepIndex]);
+      stepIndex++;
+    } else {
+      clearInterval(progressInterval);
+    }
+  }, 400);
+  
+  try {
+    console.log('Starting game with direct launcher...');
+    
+    // Use the direct launcher to bypass any wrapper issues
+    const options = {
+      mode: 'text',
+      pythonPath: pythonExecutable,
+      scriptPath: gamePath,
+      args: []
+    };
+    
+    pythonProcess = new PythonShell('direct_launcher.py', options);
+    isGameRunning = true;
+    
+    // Clear the interval when the game actually starts
+    setTimeout(() => {
+      clearInterval(progressInterval);
+      sender.send('loading-progress', {
+        percent: 100,
+        message: 'Game started successfully!'
+      });
+    }, 2000);
+    
+    sender.send('game-status', {
+      status: 'started',
+      message: 'Game started successfully'
+    });
+    
+    pythonProcess.on('message', function(message) {
+      console.log('Game message:', message);
+      sender.send('game-output', message);
+    });
+    
+    pythonProcess.on('stderr', function(stderr) {
+      console.error('Game stderr:', stderr);
+    });
+    
+    pythonProcess.end(function (err, code, signal) {
+      console.log('Game process ended:', err, code, signal);
+      isGameRunning = false;
+      if (err) {
+        console.error('Game error:', err);
         sender.send('game-status', {
           status: 'error',
-          message: `Failed to start game: ${error.message || 'Unknown error'}`
+          message: `Game exited with error: ${err.message || 'Unknown error'}`
+        });
+      } else {
+        sender.send('game-status', {
+          status: 'ended',
+          message: `Game ended successfully`
         });
       }
     });
   } catch (error) {
-    console.error('Failed to run debug checks:', error);
+    clearInterval(progressInterval);
+    console.error('Failed to start game:', error);
     
     sender.send('loading-progress', {
       percent: 100,
@@ -433,7 +407,7 @@ function startGame(sender) {
     
     sender.send('game-status', {
       status: 'error',
-      message: `Failed to run system checks: ${error.message || 'Unknown error'}`
+      message: `Failed to start game: ${error.message || 'Unknown error'}`
     });
   }
 }
