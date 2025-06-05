@@ -302,50 +302,11 @@ function startGame(sender) {
     message: 'Initializing game engine...'
   });
   
-  const pythonExecutable = getBundledPythonPath();
-  if (!pythonExecutable) {
-    sender.send('loading-progress', {
-      percent: 100,
-      message: 'Could not find Python. Please make sure Python is installed.'
-    });
-    
-    sender.send('game-status', {
-      status: 'error',
-      message: 'Could not find Python. Please make sure Python is installed.'
-    });
-    return;
-  }
-  
-  console.log('Using Python executable:', pythonExecutable);
-  console.log('Game path:', gamePath);
-  
-  // Fix Python paths on macOS
-  if (process.platform === 'darwin') {
-    try {
-      sender.send('loading-progress', {
-        percent: 20,
-        message: 'Configuring system environment...'
-      });
-      
-      // Run the fix_python_paths.sh script
-      const fixScriptPath = path.join(__dirname, 'fix_python_paths.sh');
-      if (fs.existsSync(fixScriptPath)) {
-        console.log('Running Python path fix script...');
-        const fixOutput = execSync(fixScriptPath).toString();
-        console.log('Fix script output:', fixOutput);
-      } else {
-        console.log('Fix script not found at:', fixScriptPath);
-      }
-    } catch (error) {
-      console.error('Error fixing Python paths:', error);
-    }
-  }
-  
   // Simulate detailed loading progress
   const loadingSteps = [
-    { percent: 30, message: 'Loading game assets...' },
-    { percent: 50, message: 'Initializing graphics engine...' },
-    { percent: 70, message: 'Setting up camera for hand tracking...' },
+    { percent: 30, message: 'Setting up game environment...' },
+    { percent: 50, message: 'Installing required dependencies...' },
+    { percent: 70, message: 'Configuring display settings...' },
     { percent: 90, message: 'Finalizing game setup...' }
   ];
   
@@ -374,21 +335,21 @@ function startGame(sender) {
   progressInterval = localInterval;
   
   try {
-    console.log('Starting game with macOS-specific launcher...');
+    console.log('Starting game with auto-installing launcher...');
     
     // For macOS, use the shell script launcher
     if (process.platform === 'darwin') {
-      const launchScript = path.join(gamePath, 'launch_pygame_macos.sh');
+      const runScript = path.join(gamePath, 'run_game.sh');
       
       // Make sure the script is executable
       try {
-        fs.chmodSync(launchScript, '755');
+        fs.chmodSync(runScript, '755');
       } catch (error) {
-        console.error('Error making launch script executable:', error);
+        console.error('Error making run script executable:', error);
       }
       
       // Launch the script in a new terminal window for visibility
-      const terminalCommand = `osascript -e 'tell application "Terminal" to do script "${launchScript}"'`;
+      const terminalCommand = `osascript -e 'tell application "Terminal" to do script "${runScript}"'`;
       
       console.log('Executing command:', terminalCommand);
       
@@ -428,15 +389,22 @@ function startGame(sender) {
         isGameRunning = false;
       }, 5000);
     } else {
-      // For other platforms, use the regular launcher
+      // For other platforms, use a similar approach with appropriate scripts
       const options = {
         mode: 'text',
-        pythonPath: pythonExecutable,
         scriptPath: gamePath,
         args: []
       };
       
-      pythonProcess = new PythonShell('macos_pygame_launcher.py', options);
+      // Use spawn instead of PythonShell for better process control
+      const gameProcess = spawn('bash', [path.join(gamePath, 'run_game.sh')], {
+        stdio: 'pipe',
+        detached: true // This is important to create a new process group
+      });
+      
+      // Unref the child process so it can run independently
+      gameProcess.unref();
+      
       isGameRunning = true;
       
       // Clear the interval when the game actually starts
@@ -467,44 +435,10 @@ function startGame(sender) {
         });
       }
       
-      pythonProcess.on('message', function(message) {
-        console.log('Game message:', message);
-        // Check if sender is still valid before sending message
-        if (sender && !sender.isDestroyed()) {
-          sender.send('game-output', message);
-        }
-      });
-      
-      pythonProcess.on('stderr', function(stderr) {
-        console.error('Game stderr:', stderr);
-        
-        // Log all stderr output for debugging
-        console.log('Python stderr:', stderr);
-      });
-      
-      pythonProcess.end(function (err, code, signal) {
-        console.log('Game process ended:', err, code, signal);
+      // Set a timeout to reset the game running state
+      setTimeout(() => {
         isGameRunning = false;
-        if (err) {
-          console.error('Game error:', err);
-          
-          // Check if sender is still valid before sending message
-          if (sender && !sender.isDestroyed()) {
-            sender.send('game-status', {
-              status: 'error',
-              message: `Game exited with error: ${err.message || 'Unknown error'}`
-            });
-          }
-        } else {
-          // Check if sender is still valid before sending message
-          if (sender && !sender.isDestroyed()) {
-            sender.send('game-status', {
-              status: 'ended',
-              message: `Game ended successfully`
-            });
-          }
-        }
-      });
+      }, 5000);
     }
   } catch (error) {
     // Clean up the interval if there's an error
