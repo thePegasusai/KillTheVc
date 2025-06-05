@@ -61,6 +61,9 @@ class GameWindow:
         self.init_thread = threading.Thread(target=self.initialize_pygame)
         self.init_thread.daemon = True
         self.init_thread.start()
+        
+        # Start the game automatically after a short delay
+        self.root.after(1000, self.start_game)
     
     def initialize_pygame(self):
         """Initialize pygame in a separate thread"""

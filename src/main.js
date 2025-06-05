@@ -12,6 +12,7 @@ let pythonProcess;
 let isGameRunning = false;
 let agreedToTerms = false;
 let licenseData = null;
+let progressInterval = null;
 
 // Get path to bundled Python
 function getBundledPythonPath() {
@@ -170,7 +171,14 @@ function createWindow() {
   });
 
   mainWindow.loadFile('index.html');
+  
+  // Clear any active intervals and processes when window is closed
   mainWindow.on('closed', function() {
+    if (progressInterval) {
+      clearInterval(progressInterval);
+      progressInterval = null;
+    }
+    
     mainWindow = null;
     if (pythonProcess) {
       pythonProcess.kill();
@@ -366,11 +374,18 @@ function startGame(sender) {
     
     // Clear the interval when the game actually starts
     setTimeout(() => {
-      clearInterval(progressInterval);
-      sender.send('loading-progress', {
-        percent: 100,
-        message: 'Game started successfully!'
-      });
+      if (progressInterval) {
+        clearInterval(progressInterval);
+        progressInterval = null;
+      }
+      
+      // Check if sender is still valid before sending message
+      if (sender && !sender.isDestroyed()) {
+        sender.send('loading-progress', {
+          percent: 100,
+          message: 'Game started successfully!'
+        });
+      }
     }, 2000);
     
     sender.send('game-status', {
@@ -380,7 +395,10 @@ function startGame(sender) {
     
     pythonProcess.on('message', function(message) {
       console.log('Game message:', message);
-      sender.send('game-output', message);
+      // Check if sender is still valid before sending message
+      if (sender && !sender.isDestroyed()) {
+        sender.send('game-output', message);
+      }
     });
     
     pythonProcess.on('stderr', function(stderr) {
@@ -405,7 +423,10 @@ function startGame(sender) {
           
           pythonProcess.on('message', function(message) {
             console.log('Test message:', message);
-            sender.send('game-output', message);
+            // Check if sender is still valid before sending message
+            if (sender && !sender.isDestroyed()) {
+              sender.send('game-output', message);
+            }
           });
           
           pythonProcess.on('stderr', function(stderr) {
@@ -417,44 +438,63 @@ function startGame(sender) {
             isGameRunning = false;
             
             if (err2) {
-              sender.send('game-status', {
-                status: 'error',
-                message: `Game exited with error: ${err2.message || 'Unknown error'}`
-              });
+              // Check if sender is still valid before sending message
+              if (sender && !sender.isDestroyed()) {
+                sender.send('game-status', {
+                  status: 'error',
+                  message: `Game exited with error: ${err2.message || 'Unknown error'}`
+                });
+              }
             } else {
-              sender.send('game-status', {
-                status: 'ended',
-                message: `Game ended successfully`
-              });
+              // Check if sender is still valid before sending message
+              if (sender && !sender.isDestroyed()) {
+                sender.send('game-status', {
+                  status: 'ended',
+                  message: `Game ended successfully`
+                });
+              }
             }
           });
         } catch (fallbackError) {
           console.error('Failed to start test:', fallbackError);
-          sender.send('game-status', {
-            status: 'error',
-            message: `Failed to start game: ${fallbackError.message || 'Unknown error'}`
-          });
+          // Check if sender is still valid before sending message
+          if (sender && !sender.isDestroyed()) {
+            sender.send('game-status', {
+              status: 'error',
+              message: `Failed to start game: ${fallbackError.message || 'Unknown error'}`
+            });
+          }
         }
       } else {
-        sender.send('game-status', {
-          status: 'ended',
-          message: `Game ended successfully`
-        });
+        // Check if sender is still valid before sending message
+        if (sender && !sender.isDestroyed()) {
+          sender.send('game-status', {
+            status: 'ended',
+            message: `Game ended successfully`
+          });
+        }
       }
     });
   } catch (error) {
-    clearInterval(progressInterval);
+    if (progressInterval) {
+      clearInterval(progressInterval);
+      progressInterval = null;
+    }
+    
     console.error('Failed to start game:', error);
     
-    sender.send('loading-progress', {
-      percent: 100,
-      message: `Error: ${error.message || 'Unknown error'}`
-    });
-    
-    sender.send('game-status', {
-      status: 'error',
-      message: `Failed to start game: ${error.message || 'Unknown error'}`
-    });
+    // Check if sender is still valid before sending message
+    if (sender && !sender.isDestroyed()) {
+      sender.send('loading-progress', {
+        percent: 100,
+        message: `Error: ${error.message || 'Unknown error'}`
+      });
+      
+      sender.send('game-status', {
+        status: 'error',
+        message: `Failed to start game: ${error.message || 'Unknown error'}`
+      });
+    }
   }
 }
 
