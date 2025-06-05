@@ -341,32 +341,11 @@ function startGame(sender) {
     }
   }
   
-  // First, ensure PyQt5 is installed
-  try {
-    sender.send('loading-progress', {
-      percent: 30,
-      message: 'Checking and installing dependencies...'
-    });
-    
-    // Run the PyQt5 installation script
-    const installPyQtScript = path.join(gamePath, 'install_pyqt.py');
-    if (fs.existsSync(installPyQtScript)) {
-      console.log('Running PyQt5 installation script...');
-      const installOutput = execSync(`"${pythonExecutable}" "${installPyQtScript}"`).toString();
-      console.log('Installation script output:', installOutput);
-    } else {
-      console.log('PyQt5 installation script not found at:', installPyQtScript);
-    }
-  } catch (error) {
-    console.error('Error installing PyQt5:', error);
-    // Continue anyway, as the launcher will try to install it if needed
-  }
-  
   // Simulate detailed loading progress
   const loadingSteps = [
-    { percent: 40, message: 'Loading game assets...' },
-    { percent: 60, message: 'Initializing graphics engine...' },
-    { percent: 80, message: 'Setting up camera for hand tracking...' },
+    { percent: 30, message: 'Loading game assets...' },
+    { percent: 50, message: 'Initializing graphics engine...' },
+    { percent: 70, message: 'Setting up camera for hand tracking...' },
     { percent: 90, message: 'Finalizing game setup...' }
   ];
   
@@ -395,63 +374,138 @@ function startGame(sender) {
   progressInterval = localInterval;
   
   try {
-    console.log('Starting game with PyQt launcher...');
+    console.log('Starting game with macOS-specific launcher...');
     
-    // Use the PyQt launcher for guaranteed window display
-    const options = {
-      mode: 'text',
-      pythonPath: pythonExecutable,
-      scriptPath: gamePath,
-      args: []
-    };
-    
-    // Use spawn instead of PythonShell for better process control
-    const pythonProcess = spawn(pythonExecutable, [path.join(gamePath, 'pyqt_launcher.py')], {
-      stdio: 'pipe',
-      detached: true // This is important for macOS to create a new process group
-    });
-    
-    // Unref the child process so it can run independently
-    pythonProcess.unref();
-    
-    // Set the global pythonProcess to null since we're not tracking it
-    // This allows the game to run independently of the Electron app
-    isGameRunning = true;
-    
-    // Clear the interval when the game actually starts
-    setTimeout(() => {
-      // Use a local variable for the interval reference
-      let intervalToClean = progressInterval;
-      if (intervalToClean) {
-        clearInterval(intervalToClean);
-        // Only set to null if it's the same interval
-        if (progressInterval === intervalToClean) {
-          progressInterval = null;
-        }
+    // For macOS, use the shell script launcher
+    if (process.platform === 'darwin') {
+      const launchScript = path.join(gamePath, 'launch_pygame_macos.sh');
+      
+      // Make sure the script is executable
+      try {
+        fs.chmodSync(launchScript, '755');
+      } catch (error) {
+        console.error('Error making launch script executable:', error);
       }
       
-      // Check if sender is still valid before sending message
+      // Launch the script in a new terminal window for visibility
+      const terminalCommand = `osascript -e 'tell application "Terminal" to do script "${launchScript}"'`;
+      
+      console.log('Executing command:', terminalCommand);
+      
+      // Execute the command
+      const child = execSync(terminalCommand);
+      
+      // Set a timeout to show success message
+      setTimeout(() => {
+        // Use a local variable for the interval reference
+        let intervalToClean = progressInterval;
+        if (intervalToClean) {
+          clearInterval(intervalToClean);
+          // Only set to null if it's the same interval
+          if (progressInterval === intervalToClean) {
+            progressInterval = null;
+          }
+        }
+        
+        // Check if sender is still valid before sending message
+        if (sender && !sender.isDestroyed()) {
+          sender.send('loading-progress', {
+            percent: 100,
+            message: 'Game started successfully!'
+          });
+        }
+      }, 2000);
+      
       if (sender && !sender.isDestroyed()) {
-        sender.send('loading-progress', {
-          percent: 100,
-          message: 'Game started successfully!'
+        sender.send('game-status', {
+          status: 'started',
+          message: 'Game started successfully'
         });
       }
-    }, 2000);
-    
-    if (sender && !sender.isDestroyed()) {
-      sender.send('game-status', {
-        status: 'started',
-        message: 'Game started successfully'
+      
+      // Set a timeout to reset the game running state
+      setTimeout(() => {
+        isGameRunning = false;
+      }, 5000);
+    } else {
+      // For other platforms, use the regular launcher
+      const options = {
+        mode: 'text',
+        pythonPath: pythonExecutable,
+        scriptPath: gamePath,
+        args: []
+      };
+      
+      pythonProcess = new PythonShell('macos_pygame_launcher.py', options);
+      isGameRunning = true;
+      
+      // Clear the interval when the game actually starts
+      setTimeout(() => {
+        // Use a local variable for the interval reference
+        let intervalToClean = progressInterval;
+        if (intervalToClean) {
+          clearInterval(intervalToClean);
+          // Only set to null if it's the same interval
+          if (progressInterval === intervalToClean) {
+            progressInterval = null;
+          }
+        }
+        
+        // Check if sender is still valid before sending message
+        if (sender && !sender.isDestroyed()) {
+          sender.send('loading-progress', {
+            percent: 100,
+            message: 'Game started successfully!'
+          });
+        }
+      }, 2000);
+      
+      if (sender && !sender.isDestroyed()) {
+        sender.send('game-status', {
+          status: 'started',
+          message: 'Game started successfully'
+        });
+      }
+      
+      pythonProcess.on('message', function(message) {
+        console.log('Game message:', message);
+        // Check if sender is still valid before sending message
+        if (sender && !sender.isDestroyed()) {
+          sender.send('game-output', message);
+        }
+      });
+      
+      pythonProcess.on('stderr', function(stderr) {
+        console.error('Game stderr:', stderr);
+        
+        // Log all stderr output for debugging
+        console.log('Python stderr:', stderr);
+      });
+      
+      pythonProcess.end(function (err, code, signal) {
+        console.log('Game process ended:', err, code, signal);
+        isGameRunning = false;
+        if (err) {
+          console.error('Game error:', err);
+          
+          // Check if sender is still valid before sending message
+          if (sender && !sender.isDestroyed()) {
+            sender.send('game-status', {
+              status: 'error',
+              message: `Game exited with error: ${err.message || 'Unknown error'}`
+            });
+          }
+        } else {
+          // Check if sender is still valid before sending message
+          if (sender && !sender.isDestroyed()) {
+            sender.send('game-status', {
+              status: 'ended',
+              message: `Game ended successfully`
+            });
+          }
+        }
       });
     }
-    
-    // Set a timeout to reset the game running state
-    // This is needed because we're not tracking the process
-    setTimeout(() => {
-      isGameRunning = false;
-    }, 5000);
-    
   } catch (error) {
     // Clean up the interval if there's an error
     if (progressInterval) {
