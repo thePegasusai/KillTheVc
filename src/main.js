@@ -282,141 +282,149 @@ function startGame(sender) {
   console.log('Using Python executable:', pythonExecutable);
   console.log('Game path:', gamePath);
   
-  const options = {
+  // First run the debug script to check everything
+  const debugOptions = {
     mode: 'text',
     pythonPath: pythonExecutable,
     scriptPath: gamePath,
     args: []
   };
   
-  // Simulate detailed loading progress
-  const loadingSteps = [
-    { percent: 15, message: 'Loading game assets...' },
-    { percent: 25, message: 'Initializing graphics engine...' },
-    { percent: 35, message: 'Setting up camera for hand tracking...' },
-    { percent: 45, message: 'Calibrating hand gesture recognition...' },
-    { percent: 55, message: 'Loading enemy patterns...' },
-    { percent: 65, message: 'Preparing sound effects...' },
-    { percent: 75, message: 'Initializing physics engine...' },
-    { percent: 85, message: 'Setting up game interface...' },
-    { percent: 95, message: 'Finalizing game setup...' }
-  ];
-  
-  let stepIndex = 0;
-  const progressInterval = setInterval(() => {
-    if (stepIndex < loadingSteps.length) {
-      sender.send('loading-progress', loadingSteps[stepIndex]);
-      stepIndex++;
-    } else {
-      clearInterval(progressInterval);
-    }
-  }, 400);
+  console.log('Running debug checks...');
   
   try {
-    console.log('Starting Python process with options:', JSON.stringify(options));
+    // Run the debug script first
+    const debugProcess = new PythonShell('game_debug.py', debugOptions);
     
-    // Use the wrapper script instead of directly calling game.py
-    pythonProcess = new PythonShell('game_wrapper.py', options);
-    isGameRunning = true;
-    
-    // Clear the interval when the game actually starts
-    setTimeout(() => {
-      clearInterval(progressInterval);
-      sender.send('loading-progress', {
-        percent: 100,
-        message: 'Game started successfully!'
-      });
-    }, 4000);
-    
-    sender.send('game-status', {
-      status: 'started',
-      message: 'Game started successfully'
+    sender.send('loading-progress', {
+      percent: 20,
+      message: 'Running system checks...'
     });
     
-    pythonProcess.on('message', function(message) {
-      console.log('Game message:', message);
-      sender.send('game-output', message);
+    let debugOutput = '';
+    
+    debugProcess.on('message', function(message) {
+      console.log('Debug message:', message);
+      debugOutput += message + '\n';
     });
     
-    pythonProcess.on('stderr', function(stderr) {
-      console.error('Game stderr:', stderr);
+    debugProcess.on('stderr', function(stderr) {
+      console.error('Debug stderr:', stderr);
+      debugOutput += 'ERROR: ' + stderr + '\n';
+    });
+    
+    debugProcess.end(function(err, code, signal) {
+      console.log('Debug process ended:', err, code, signal);
       
-      // Display all stderr output for debugging
-      console.log('Python stderr:', stderr);
-      
-      // Check for common errors
-      if (stderr.includes('ModuleNotFoundError') || stderr.includes('ImportError')) {
-        sender.send('game-status', {
-          status: 'error',
-          message: `Missing Python module. Please check your installation.`
-        });
-      } else if (stderr.includes('ERROR:')) {
-        // Display any error messages from our wrapper
-        sender.send('game-status', {
-          status: 'error',
-          message: stderr
-        });
-      } else if (stderr.includes('WARNING:')) {
-        // Display any warnings from our wrapper
+      if (err || code !== 0) {
+        console.error('Debug checks failed:', err);
         sender.send('loading-progress', {
-          percent: 70,
-          message: stderr
+          percent: 100,
+          message: 'System checks failed. See error details.'
         });
-      }
-    });
-    
-    pythonProcess.on('stdout', function(stdout) {
-      // Log all stdout for debugging
-      console.log('Python stdout:', stdout);
-      
-      // Check for specific messages
-      if (stdout.includes('Starting game...')) {
-        sender.send('loading-progress', {
-          percent: 80,
-          message: 'Game engine initialized!'
-        });
-      }
-    });
-    
-    pythonProcess.end(function (err, code, signal) {
-      console.log('Game process ended:', err, code, signal);
-      isGameRunning = false;
-      if (err) {
-        console.error('Game error:', err);
         
-        // Check for common errors
-        if (err.message && err.message.includes('ModuleNotFoundError: No module named')) {
-          const moduleName = err.message.split("'")[1];
-          sender.send('game-status', {
-            status: 'error',
-            message: `Error: Missing Python module '${moduleName}'. Please check your installation.`
-          });
-        } else if (err.message && err.message.includes('webcam')) {
-          sender.send('game-status', {
-            status: 'error',
-            message: `Error: Could not access webcam. Please check your webcam connection and permissions.`
-          });
-        } else {
-          sender.send('game-status', {
-            status: 'error',
-            message: `Game exited with error: ${err.message || 'Unknown error'}`
-          });
-        }
-      } else if (code !== 0) {
         sender.send('game-status', {
           status: 'error',
-          message: `Game exited with code: ${code}. Check the console for more details.`
+          message: `System checks failed: ${debugOutput || err?.message || 'Unknown error'}`
         });
-      } else {
+        return;
+      }
+      
+      // Debug checks passed, now run the actual game
+      console.log('Debug checks passed, starting game...');
+      sender.send('loading-progress', {
+        percent: 40,
+        message: 'System checks passed. Starting game...'
+      });
+      
+      // Simulate detailed loading progress
+      const loadingSteps = [
+        { percent: 50, message: 'Loading game assets...' },
+        { percent: 60, message: 'Initializing graphics engine...' },
+        { percent: 70, message: 'Setting up camera for hand tracking...' },
+        { percent: 80, message: 'Preparing game environment...' },
+        { percent: 90, message: 'Finalizing game setup...' }
+      ];
+      
+      let stepIndex = 0;
+      const progressInterval = setInterval(() => {
+        if (stepIndex < loadingSteps.length) {
+          sender.send('loading-progress', loadingSteps[stepIndex]);
+          stepIndex++;
+        } else {
+          clearInterval(progressInterval);
+        }
+      }, 400);
+      
+      // Now start the actual game using the simple launcher
+      const gameOptions = {
+        mode: 'text',
+        pythonPath: pythonExecutable,
+        scriptPath: gamePath,
+        args: []
+      };
+      
+      try {
+        console.log('Starting game with simple launcher...');
+        pythonProcess = new PythonShell('simple_launcher.py', gameOptions);
+        isGameRunning = true;
+        
+        // Clear the interval when the game actually starts
+        setTimeout(() => {
+          clearInterval(progressInterval);
+          sender.send('loading-progress', {
+            percent: 100,
+            message: 'Game started successfully!'
+          });
+        }, 2000);
+        
         sender.send('game-status', {
-          status: 'ended',
-          message: `Game ended successfully`
+          status: 'started',
+          message: 'Game started successfully'
+        });
+        
+        pythonProcess.on('message', function(message) {
+          console.log('Game message:', message);
+          sender.send('game-output', message);
+        });
+        
+        pythonProcess.on('stderr', function(stderr) {
+          console.error('Game stderr:', stderr);
+        });
+        
+        pythonProcess.end(function (err, code, signal) {
+          console.log('Game process ended:', err, code, signal);
+          isGameRunning = false;
+          if (err) {
+            console.error('Game error:', err);
+            sender.send('game-status', {
+              status: 'error',
+              message: `Game exited with error: ${err.message || 'Unknown error'}`
+            });
+          } else {
+            sender.send('game-status', {
+              status: 'ended',
+              message: `Game ended successfully`
+            });
+          }
+        });
+      } catch (error) {
+        clearInterval(progressInterval);
+        console.error('Failed to start game:', error);
+        
+        sender.send('loading-progress', {
+          percent: 100,
+          message: `Error: ${error.message || 'Unknown error'}`
+        });
+        
+        sender.send('game-status', {
+          status: 'error',
+          message: `Failed to start game: ${error.message || 'Unknown error'}`
         });
       }
     });
   } catch (error) {
-    clearInterval(progressInterval);
-    console.error('Failed to start game:', error);
+    console.error('Failed to run debug checks:', error);
     
     sender.send('loading-progress', {
       percent: 100,
@@ -425,7 +433,7 @@ function startGame(sender) {
     
     sender.send('game-status', {
       status: 'error',
-      message: `Failed to start game: ${error.message || 'Unknown error'}`
+      message: `Failed to run system checks: ${error.message || 'Unknown error'}`
     });
   }
 }
