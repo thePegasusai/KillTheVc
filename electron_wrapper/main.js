@@ -5,13 +5,20 @@ const fs = require('fs');
 const os = require('os');
 const { execSync } = require('child_process');
 
+// Import Python installer module
+const pythonInstaller = require('./python_installer');
+
 let mainWindow;
+let pythonInstallerWindow;
 let pythonProcess;
 let isGameRunning = false;
 let agreedToTerms = false;
 let licenseData = null;
 let dependencyCheckInProgress = false;
 let dependencyInstallInProgress = false;
+
+// Make mainWindow accessible to other modules
+global.mainWindow = null;
 
 // Determine the correct Python executable based on platform
 function getPythonExecutable() {
@@ -28,8 +35,7 @@ function getPythonExecutable() {
           execSync('which python');
           return 'python';
         } catch (e2) {
-          dialog.showErrorBox('Python Not Found', 
-            'Python is not installed or not in your PATH. Please install Python 3.7 or later.');
+          // Instead of showing error, we'll handle this with the Python installer
           return null;
         }
       }
@@ -43,8 +49,7 @@ function getPythonExecutable() {
           execSync('where py');
           return 'py';
         } catch (e2) {
-          dialog.showErrorBox('Python Not Found', 
-            'Python is not installed or not in your PATH. Please install Python 3.7 or later.');
+          // Instead of showing error, we'll handle this with the Python installer
           return null;
         }
       }
@@ -58,18 +63,38 @@ function getPythonExecutable() {
           execSync('which python');
           return 'python';
         } catch (e2) {
-          dialog.showErrorBox('Python Not Found', 
-            'Python is not installed or not in your PATH. Please install Python 3.7 or later.');
+          // Instead of showing error, we'll handle this with the Python installer
           return null;
         }
       }
     }
   } catch (error) {
     console.error('Error detecting Python:', error);
-    dialog.showErrorBox('Python Detection Error', 
-      'An error occurred while detecting Python. Please make sure Python 3.7 or later is installed.');
     return null;
   }
+}
+
+// Show Python installer window
+function showPythonInstallerWindow() {
+  pythonInstallerWindow = new BrowserWindow({
+    width: 700,
+    height: 600,
+    parent: mainWindow,
+    modal: true,
+    webPreferences: {
+      nodeIntegration: true,
+      contextIsolation: false
+    },
+    icon: path.join(__dirname, 'assets/icon.png')
+  });
+
+  pythonInstallerWindow.loadFile(path.join(__dirname, 'python_installer_ui.html'));
+  
+  pythonInstallerWindow.on('closed', function() {
+    pythonInstallerWindow = null;
+  });
+  
+  return pythonInstallerWindow;
 }
 
 function showLicenseAgreement() {
@@ -151,9 +176,13 @@ function createWindow() {
     icon: path.join(__dirname, 'assets/icon.png')
   });
 
+  // Store reference to mainWindow globally
+  global.mainWindow = mainWindow;
+
   mainWindow.loadFile('index.html');
   mainWindow.on('closed', function() {
     mainWindow = null;
+    global.mainWindow = null;
     if (pythonProcess) {
       pythonProcess.kill();
       pythonProcess = null;
@@ -218,8 +247,27 @@ app.on('ready', async () => {
     await showActivationWindow();
   }
   
-  // Check dependencies automatically on startup
-  checkDependencies(mainWindow.webContents);
+  // Check if Python is installed
+  const pythonInstalled = pythonInstaller.checkPythonInstalled();
+  if (!pythonInstalled) {
+    // Show Python installation dialog
+    const shouldInstall = await pythonInstaller.showPythonInstallationDialog();
+    if (shouldInstall) {
+      // Show Python installer window
+      const installerWindow = showPythonInstallerWindow();
+    } else {
+      dialog.showMessageBox(mainWindow, {
+        type: 'warning',
+        title: 'Python Required',
+        message: 'Python is required to run this application',
+        detail: 'The application may not function correctly without Python installed.',
+        buttons: ['OK']
+      });
+    }
+  } else {
+    // Check dependencies automatically on startup
+    checkDependencies(mainWindow.webContents);
+  }
 });
 
 app.on('window-all-closed', function() {
@@ -258,13 +306,16 @@ function checkDependencies(sender) {
     dependencyCheckInProgress = false;
     sender.send('loading-progress', {
       percent: 100,
-      message: 'Error: Python not found. Please install Python 3.7 or later.'
+      message: 'Python not found. Please install Python first.'
     });
     
     sender.send('dependencies-status', {
-      status: 'error',
-      message: 'Python not found. Please install Python 3.7 or later.'
+      status: 'python-missing',
+      message: 'Python not found. Please install Python first.'
     });
+    
+    // Show Python installer window
+    const installerWindow = showPythonInstallerWindow();
     return;
   }
   
@@ -367,13 +418,16 @@ function installDependencies(sender) {
     dependencyInstallInProgress = false;
     sender.send('loading-progress', {
       percent: 100,
-      message: 'Error: Python not found. Please install Python 3.7 or later.'
+      message: 'Python not found. Please install Python first.'
     });
     
     sender.send('installation-status', {
       status: 'error',
-      message: 'Python not found. Please install Python 3.7 or later.'
+      message: 'Python not found. Please install Python first.'
     });
+    
+    // Show Python installer window
+    const installerWindow = showPythonInstallerWindow();
     return;
   }
   
@@ -469,13 +523,16 @@ function startGame(sender) {
   if (!pythonExecutable) {
     sender.send('loading-progress', {
       percent: 100,
-      message: 'Error: Python not found. Please install Python 3.7 or later.'
+      message: 'Python not found. Please install Python first.'
     });
     
     sender.send('game-status', {
       status: 'error',
-      message: 'Python not found. Please install Python 3.7 or later.'
+      message: 'Python not found. Please install Python first.'
     });
+    
+    // Show Python installer window
+    const installerWindow = showPythonInstallerWindow();
     return;
   }
   
@@ -617,4 +674,30 @@ ipcMain.on('show-about', (event) => {
     buttons: ['OK'],
     icon: path.join(__dirname, 'assets/pegasus_logo.png')
   });
+});
+
+// Python installer IPC handlers
+ipcMain.on('install-python', async (event) => {
+  const success = await pythonInstaller.handlePythonInstallation(event.sender);
+  if (success) {
+    // Close the installer window
+    if (pythonInstallerWindow && !pythonInstallerWindow.isDestroyed()) {
+      pythonInstallerWindow.close();
+    }
+    
+    // Check dependencies after Python is installed
+    setTimeout(() => {
+      checkDependencies(mainWindow.webContents);
+    }, 1000);
+  }
+});
+
+ipcMain.on('manual-python-install', (event) => {
+  shell.openExternal('https://www.python.org/downloads/');
+});
+
+ipcMain.on('cancel-python-install', (event) => {
+  if (pythonInstallerWindow && !pythonInstallerWindow.isDestroyed()) {
+    pythonInstallerWindow.close();
+  }
 });
