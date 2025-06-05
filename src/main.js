@@ -314,7 +314,9 @@ function startGame(sender) {
   
   try {
     console.log('Starting Python process with options:', JSON.stringify(options));
-    pythonProcess = new PythonShell('game.py', options);
+    
+    // Use the wrapper script instead of directly calling game.py
+    pythonProcess = new PythonShell('game_wrapper.py', options);
     isGameRunning = true;
     
     // Clear the interval when the game actually starts
@@ -339,11 +341,39 @@ function startGame(sender) {
     pythonProcess.on('stderr', function(stderr) {
       console.error('Game stderr:', stderr);
       
+      // Display all stderr output for debugging
+      console.log('Python stderr:', stderr);
+      
       // Check for common errors
       if (stderr.includes('ModuleNotFoundError') || stderr.includes('ImportError')) {
         sender.send('game-status', {
           status: 'error',
           message: `Missing Python module. Please check your installation.`
+        });
+      } else if (stderr.includes('ERROR:')) {
+        // Display any error messages from our wrapper
+        sender.send('game-status', {
+          status: 'error',
+          message: stderr
+        });
+      } else if (stderr.includes('WARNING:')) {
+        // Display any warnings from our wrapper
+        sender.send('loading-progress', {
+          percent: 70,
+          message: stderr
+        });
+      }
+    });
+    
+    pythonProcess.on('stdout', function(stdout) {
+      // Log all stdout for debugging
+      console.log('Python stdout:', stdout);
+      
+      // Check for specific messages
+      if (stdout.includes('Starting game...')) {
+        sender.send('loading-progress', {
+          percent: 80,
+          message: 'Game engine initialized!'
         });
       }
     });
@@ -361,16 +391,26 @@ function startGame(sender) {
             status: 'error',
             message: `Error: Missing Python module '${moduleName}'. Please check your installation.`
           });
+        } else if (err.message && err.message.includes('webcam')) {
+          sender.send('game-status', {
+            status: 'error',
+            message: `Error: Could not access webcam. Please check your webcam connection and permissions.`
+          });
         } else {
           sender.send('game-status', {
             status: 'error',
             message: `Game exited with error: ${err.message || 'Unknown error'}`
           });
         }
+      } else if (code !== 0) {
+        sender.send('game-status', {
+          status: 'error',
+          message: `Game exited with code: ${code}. Check the console for more details.`
+        });
       } else {
         sender.send('game-status', {
           status: 'ended',
-          message: `Game ended with code: ${code}`
+          message: `Game ended successfully`
         });
       }
     });
