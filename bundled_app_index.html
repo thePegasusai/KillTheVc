@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Kill the VC</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #2c3e50;
+            color: #ecf0f1;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+        .header {
+            background-color: #34495e;
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+        .logo {
+            display: flex;
+            align-items: center;
+        }
+        .logo img {
+            height: 40px;
+            margin-right: 10px;
+        }
+        .logo h1 {
+            margin: 0;
+            font-size: 24px;
+        }
+        .menu {
+            display: flex;
+        }
+        .menu-item {
+            margin-left: 20px;
+            cursor: pointer;
+            padding: 5px 10px;
+            border-radius: 4px;
+            transition: background-color 0.3s;
+        }
+        .menu-item:hover {
+            background-color: #2980b9;
+        }
+        .content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .game-container {
+            background-color: #34495e;
+            border-radius: 8px;
+            padding: 30px;
+            text-align: center;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+            max-width: 600px;
+            width: 100%;
+        }
+        .game-title {
+            font-size: 36px;
+            margin-bottom: 20px;
+            color: #3498db;
+        }
+        .game-description {
+            margin-bottom: 30px;
+            line-height: 1.6;
+        }
+        .button {
+            background-color: #2ecc71;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 18px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            margin: 10px;
+        }
+        .button:hover {
+            background-color: #27ae60;
+        }
+        .status {
+            margin-top: 20px;
+            padding: 10px;
+            border-radius: 4px;
+            display: none;
+        }
+        .status.success {
+            background-color: rgba(46, 204, 113, 0.2);
+            border: 1px solid #2ecc71;
+        }
+        .status.error {
+            background-color: rgba(231, 76, 60, 0.2);
+            border: 1px solid #e74c3c;
+        }
+        .status.warning {
+            background-color: rgba(241, 196, 15, 0.2);
+            border: 1px solid #f1c40f;
+        }
+        .footer {
+            background-color: #34495e;
+            padding: 10px 20px;
+            text-align: center;
+            font-size: 14px;
+        }
+        .footer a {
+            color: #3498db;
+            text-decoration: none;
+        }
+        .footer a:hover {
+            text-decoration: underline;
+        }
+        .progress-container {
+            width: 100%;
+            margin-top: 20px;
+            display: none;
+        }
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background-color: #2c3e50;
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative;
+        }
+        .progress-fill {
+            height: 100%;
+            background-color: #2ecc71;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+        .progress-text {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: bold;
+            color: white;
+            text-shadow: 0 0 3px rgba(0, 0, 0, 0.5);
+        }
+        .loading-details {
+            margin-top: 10px;
+            font-size: 14px;
+            color: #bdc3c7;
+            text-align: left;
+            max-height: 100px;
+            overflow-y: auto;
+        }
+        .button-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="logo">
+            <img src="assets/pegasus_logo.png" alt="ThePegasusAI Logo">
+            <h1>Kill the VC</h1>
+        </div>
+        <div class="menu">
+            <div class="menu-item" id="licenseBtn">License</div>
+            <div class="menu-item" id="websiteBtn">Website</div>
+            <div class="menu-item" id="aboutBtn">About</div>
+        </div>
+    </div>
+    
+    <div class="content">
+        <div class="game-container">
+            <h2 class="game-title">Kill the VC</h2>
+            <p class="game-description">
+                Welcome to Kill the VC, a thrilling hand gesture game where you battle against a fearsome Venture Capitalist (VC) using your very own spaceship! Control your ship and unleash lasers with intuitive hand movements detected via your webcam.
+            </p>
+            <div class="button-container">
+                <button class="button" id="startGameBtn">Start Game</button>
+            </div>
+            <div class="status" id="statusMessage"></div>
+            
+            <div class="progress-container" id="progressContainer">
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                    <div class="progress-text" id="progressText">0%</div>
+                </div>
+                <div class="loading-details" id="loadingDetails"></div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="footer">
+        © 2025 ThePegasusAI. All rights reserved. Developed by Iman Jefferson. <a href="https://www.thepegasusai.com/" target="_blank">www.thepegasusai.com</a>
+    </div>
+    
+    <script>
+        const { ipcRenderer } = require('electron');
+        
+        document.getElementById('startGameBtn').addEventListener('click', () => {
+            showStatus('Starting game...', 'success');
+            showProgressBar();
+            updateProgress(5, 'Initializing game components...');
+            ipcRenderer.send('start-game');
+        });
+        
+        document.getElementById('licenseBtn').addEventListener('click', () => {
+            ipcRenderer.send('manage-license');
+        });
+        
+        document.getElementById('websiteBtn').addEventListener('click', () => {
+            ipcRenderer.send('open-website');
+        });
+        
+        document.getElementById('aboutBtn').addEventListener('click', () => {
+            ipcRenderer.send('show-about');
+        });
+        
+        ipcRenderer.on('game-status', (event, data) => {
+            if (data.status === 'started') {
+                updateProgress(100, 'Game started successfully');
+                setTimeout(() => {
+                    hideProgressBar();
+                    showStatus('Game started successfully.', 'success');
+                }, 1000);
+            } else if (data.status === 'ended') {
+                hideProgressBar();
+                showStatus('Game ended.', 'success');
+            } else {
+                updateProgress(100, 'Error starting game');
+                setTimeout(() => {
+                    hideProgressBar();
+                    showStatus(`Something went wrong. Please try again.`, 'error');
+                }, 1000);
+            }
+        });
+        
+        ipcRenderer.on('loading-progress', (event, data) => {
+            updateProgress(data.percent, data.message);
+        });
+        
+        function showStatus(message, type) {
+            const statusElement = document.getElementById('statusMessage');
+            statusElement.textContent = message;
+            statusElement.className = `status ${type}`;
+            statusElement.style.display = 'block';
+        }
+        
+        function showProgressBar() {
+            document.getElementById('progressContainer').style.display = 'block';
+            document.getElementById('progressFill').style.width = '0%';
+            document.getElementById('progressText').textContent = '0%';
+            document.getElementById('loadingDetails').textContent = '';
+        }
+        
+        function hideProgressBar() {
+            document.getElementById('progressContainer').style.display = 'none';
+        }
+        
+        function updateProgress(percent, message) {
+            const progressFill = document.getElementById('progressFill');
+            const progressText = document.getElementById('progressText');
+            const loadingDetails = document.getElementById('loadingDetails');
+            
+            progressFill.style.width = `${percent}%`;
+            progressText.textContent = `${percent}%`;
+            
+            if (message) {
+                const now = new Date().toLocaleTimeString();
+                loadingDetails.innerHTML = `${now}: ${message}<br>` + loadingDetails.innerHTML;
+            }
+        }
+    </script>
+</body>
+</html>
