@@ -1,34 +1,59 @@
-# Byte-compiled / optimized / DLL files
+# Python
 __pycache__/
 *.py[cod]
 *$py.class
-
-# Distribution / packaging
-dist/
+*.so
+.Python
+env/
 build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
 *.egg-info/
+.installed.cfg
 *.egg
 
-# Electron packaging
-electron_wrapper/node_modules/
-electron_wrapper/release-builds/
+# Node.js
+node_modules/
+npm-debug.log
+yarn-debug.log
+yarn-error.log
+
+# Electron
+release-builds/
+
+# Virtual Environment
+venv/
+ENV/
 
 # macOS
 .DS_Store
 .AppleDouble
 .LSOverride
+._*
 
 # Windows
 Thumbs.db
 ehthumbs.db
 Desktop.ini
+$RECYCLE.BIN/
 
 # Distribution packages
-DISTRIBUTIONS/macOS/dmg_contents/kill-the-vc.app/
-DISTRIBUTIONS/macOS/KillTheVC-macOS.zip
-DISTRIBUTIONS/Windows/KillTheVC-Windows-Installer.zip
+*.dmg
+*.exe
+*.msi
+*.zip
+*.tar.gz
+*.pkg
 
-# Temporary files
-*.tmp
-*.bak
-*.log
+# Except our distribution packages
+!dist/*.zip
+!dist/*.dmg
+!dist/*.exe

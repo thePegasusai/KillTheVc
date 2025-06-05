@@ -23,24 +23,6 @@ Simply download the installer for your platform and run it. No additional setup 
 2. Open the DMG and drag the app to your Applications folder
 3. Launch "Kill the VC" from your Applications folder
 
-## Project Structure
-
-- `src/` - Source code for the application
-- `assets/` - Game assets (images, sounds, etc.)
-- `dist/` - Distribution packages
-- `docs/` - Documentation
-
-## Building from Source
-
-To build the application from source:
-
-```bash
-# Run the bundling script
-./bundle_python.sh
-```
-
-This will create a bundled application with Python included, ready for distribution.
-
 ## Credits
 
 Developed by Iman Jefferson
