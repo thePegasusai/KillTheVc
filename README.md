@@ -19,9 +19,10 @@ Simply download the installer for your platform and run it. No additional setup 
 3. Launch "Kill the VC" from your Start menu
 
 ### macOS
-1. Download the macOS DMG file from the `dist` directory
-2. Open the DMG and drag the app to your Applications folder
-3. Launch "Kill the VC" from your Applications folder
+1. Download the macOS ZIP file (`KillTheVC-macOS.zip`) from the `dist` directory
+2. Extract the ZIP file
+3. Drag the app to your Applications folder
+4. Launch "Kill the VC" from your Applications folder
 
 ## Project Structure
 
