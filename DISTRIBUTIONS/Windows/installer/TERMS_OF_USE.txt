@@ -1,0 +1,45 @@
+KILL THE VC - TERMS OF USE
+
+Last Updated: June 5, 2025
+
+PLEASE READ THESE TERMS OF USE CAREFULLY BEFORE USING THE SOFTWARE.
+
+1. ACCEPTANCE OF TERMS
+By downloading, installing, or using the "Kill the VC" game ("Software"), you agree to be bound by these Terms of Use. If you do not agree to these terms, do not install or use the Software.
+
+2. LICENSE GRANT
+Subject to your compliance with these Terms, you are granted a limited, non-exclusive, non-transferable license to use the Software for personal, non-commercial purposes.
+
+3. OWNERSHIP
+The Software was developed by Iman Jefferson and is licensed exclusively to ThePegasusAI for distribution and sales. All rights, title, and interest in and to the Software, including all intellectual property rights, are owned by the developer and/or ThePegasusAI.
+
+4. RESTRICTIONS
+You may not:
+- Copy, modify, or create derivative works of the Software
+- Reverse engineer, decompile, or disassemble the Software
+- Remove any copyright or other proprietary notices
+- Distribute, sell, lease, rent, or sublicense the Software
+- Use the Software for any illegal purpose
+
+5. PRIVACY
+The Software may collect certain information through your use, including camera data for hand gesture recognition. This data is processed locally and is not transmitted or stored externally.
+
+6. DISCLAIMER OF WARRANTIES
+THE SOFTWARE IS PROVIDED "AS IS" WITHOUT WARRANTY OF ANY KIND. THE DEVELOPER AND DISTRIBUTOR DISCLAIM ALL WARRANTIES, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NONINFRINGEMENT.
+
+7. LIMITATION OF LIABILITY
+IN NO EVENT SHALL THE DEVELOPER OR DISTRIBUTOR BE LIABLE FOR ANY SPECIAL, INCIDENTAL, INDIRECT, OR CONSEQUENTIAL DAMAGES WHATSOEVER ARISING OUT OF OR IN CONNECTION WITH YOUR USE OR INABILITY TO USE THE SOFTWARE.
+
+8. TERMINATION
+This license is effective until terminated. Your rights under this license will terminate automatically without notice if you fail to comply with any of its terms.
+
+9. GOVERNING LAW
+These Terms shall be governed by the laws of the jurisdiction in which the developer resides, without regard to its conflict of law provisions.
+
+10. CHANGES TO TERMS
+The developer reserves the right to modify these Terms at any time. Updated terms will be available through the Software or on the official website.
+
+11. CONTACT
+For questions regarding these Terms, please contact ThePegasusAI at contact@thepegasusai.com.
+
+BY USING THE SOFTWARE, YOU ACKNOWLEDGE THAT YOU HAVE READ THESE TERMS, UNDERSTAND THEM, AND AGREE TO BE BOUND BY THEM.

@@ -1,0 +1,36 @@
+KILL THE VC - END USER LICENSE AGREEMENT
+
+IMPORTANT: PLEASE READ THIS END USER LICENSE AGREEMENT ("EULA") CAREFULLY BEFORE INSTALLING OR USING THE SOFTWARE.
+
+This EULA is a legal agreement between you (either an individual or a single entity) and ThePegasusAI for the "Kill the VC" software product, which includes computer software and associated media and documentation ("Software"). By installing, copying, or otherwise using the Software, you agree to be bound by the terms of this EULA. If you do not agree to the terms of this EULA, do not install or use the Software.
+
+1. GRANT OF LICENSE
+ThePegasusAI grants you the following rights provided that you comply with all terms and conditions of this EULA:
+
+Installation and Use: You may install and use one copy of the Software on a single computer. If you have multiple licenses for the Software, you may have as many copies of the Software in use as you have licenses.
+
+2. DESCRIPTION OF OTHER RIGHTS AND LIMITATIONS
+Limitations on Reverse Engineering, Decompilation, and Disassembly: You may not reverse engineer, decompile, or disassemble the Software, except and only to the extent that such activity is expressly permitted by applicable law notwithstanding this limitation.
+
+Separation of Components: The Software is licensed as a single product. Its component parts may not be separated for use on more than one computer.
+
+Rental: You may not rent, lease, or lend the Software.
+
+Software Transfer: You may permanently transfer all of your rights under this EULA, provided you retain no copies, you transfer all of the Software (including all component parts, the media and printed materials, any upgrades, this EULA, and, if applicable, the Certificate of Authenticity), and the recipient agrees to the terms of this EULA.
+
+Termination: Without prejudice to any other rights, ThePegasusAI may terminate this EULA if you fail to comply with the terms and conditions of this EULA. In such event, you must destroy all copies of the Software and all of its component parts.
+
+3. COPYRIGHT
+All title and copyrights in and to the Software (including but not limited to any images, photographs, animations, video, audio, music, text, and "applets" incorporated into the Software), the accompanying printed materials, and any copies of the Software are owned by Iman Jefferson and licensed exclusively to ThePegasusAI. The Software is protected by copyright laws and international treaty provisions. Therefore, you must treat the Software like any other copyrighted material.
+
+4. LIMITED WARRANTY
+NO WARRANTIES: ThePegasusAI expressly disclaims any warranty for the Software. The Software and any related documentation is provided "as is" without warranty of any kind, either express or implied, including, without limitation, the implied warranties of merchantability, fitness for a particular purpose, or noninfringement. The entire risk arising out of use or performance of the Software remains with you.
+
+NO LIABILITY FOR DAMAGES: In no event shall ThePegasusAI or Iman Jefferson be liable for any damages whatsoever (including, without limitation, damages for loss of business profits, business interruption, loss of business information, or any other pecuniary loss) arising out of the use of or inability to use this product, even if ThePegasusAI has been advised of the possibility of such damages.
+
+5. MISCELLANEOUS
+This EULA is governed by the laws of the jurisdiction in which the developer resides.
+
+Should you have any questions concerning this EULA, or if you desire to contact ThePegasusAI for any reason, please contact ThePegasusAI at eula@thepegasusai.com.
+
+BY INSTALLING, COPYING, OR OTHERWISE USING THE SOFTWARE, YOU ACKNOWLEDGE THAT YOU HAVE READ THIS EULA, UNDERSTAND IT, AND AGREE TO BE BOUND BY ITS TERMS AND CONDITIONS.

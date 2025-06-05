@@ -1,0 +1,34 @@
+KILL THE VC - LICENSE VERIFICATION
+
+Thank you for purchasing "Kill the VC" from ThePegasusAI!
+
+Your license information:
+
+License Type: Single User License
+Licensed To: [CUSTOMER_NAME]
+License Key: [LICENSE_KEY]
+Purchase Date: [PURCHASE_DATE]
+Order Number: [ORDER_NUMBER]
+
+This license entitles you to:
+
+1. Install and use the software on a single computer
+2. Receive updates for the current major version
+3. Access to customer support via email
+
+This license does not allow:
+
+1. Redistribution or sharing of the software
+2. Modification of the software for redistribution
+3. Use of the software beyond the terms specified in the EULA
+
+To activate your license:
+1. Enter your license key when prompted during first run
+2. If you need to re-activate, select "License" from the Help menu
+
+For support or questions about your license, please contact:
+support@thepegasusai.com
+
+Thank you for your purchase!
+
+ThePegasusAI Team
