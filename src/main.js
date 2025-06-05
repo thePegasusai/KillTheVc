@@ -344,9 +344,9 @@ function startGame(sender) {
   }, 400);
   
   try {
-    console.log('Starting game with direct launcher...');
+    console.log('Starting standalone game...');
     
-    // Use the direct launcher to bypass any wrapper issues
+    // Use the standalone game to ensure window display works
     const options = {
       mode: 'text',
       pythonPath: pythonExecutable,
@@ -354,7 +354,8 @@ function startGame(sender) {
       args: []
     };
     
-    pythonProcess = new PythonShell('direct_launcher.py', options);
+    // Try to run the standalone game first
+    pythonProcess = new PythonShell('standalone_game.py', options);
     isGameRunning = true;
     
     // Clear the interval when the game actually starts
@@ -378,6 +379,14 @@ function startGame(sender) {
     
     pythonProcess.on('stderr', function(stderr) {
       console.error('Game stderr:', stderr);
+      
+      // If we see specific display errors, try to provide helpful information
+      if (stderr.includes('display') || stderr.includes('video') || stderr.includes('SDL')) {
+        sender.send('game-status', {
+          status: 'error',
+          message: 'Display error: Could not initialize game window. Please check your display settings.'
+        });
+      }
     });
     
     pythonProcess.end(function (err, code, signal) {
@@ -385,10 +394,53 @@ function startGame(sender) {
       isGameRunning = false;
       if (err) {
         console.error('Game error:', err);
-        sender.send('game-status', {
-          status: 'error',
-          message: `Game exited with error: ${err.message || 'Unknown error'}`
-        });
+        
+        // If the standalone game fails, try the direct launcher as a fallback
+        if (err.message && (err.message.includes('display') || err.message.includes('video') || err.message.includes('SDL'))) {
+          console.log('Trying direct launcher as fallback...');
+          
+          try {
+            pythonProcess = new PythonShell('direct_launcher.py', options);
+            isGameRunning = true;
+            
+            pythonProcess.on('message', function(message) {
+              console.log('Fallback game message:', message);
+              sender.send('game-output', message);
+            });
+            
+            pythonProcess.on('stderr', function(stderr) {
+              console.error('Fallback game stderr:', stderr);
+            });
+            
+            pythonProcess.end(function (err2, code2, signal2) {
+              console.log('Fallback game process ended:', err2, code2, signal2);
+              isGameRunning = false;
+              
+              if (err2) {
+                sender.send('game-status', {
+                  status: 'error',
+                  message: `Game exited with error: ${err2.message || 'Unknown error'}`
+                });
+              } else {
+                sender.send('game-status', {
+                  status: 'ended',
+                  message: `Game ended successfully`
+                });
+              }
+            });
+          } catch (fallbackError) {
+            console.error('Failed to start fallback game:', fallbackError);
+            sender.send('game-status', {
+              status: 'error',
+              message: `Failed to start game: ${fallbackError.message || 'Unknown error'}`
+            });
+          }
+        } else {
+          sender.send('game-status', {
+            status: 'error',
+            message: `Game exited with error: ${err.message || 'Unknown error'}`
+          });
+        }
       } else {
         sender.send('game-status', {
           status: 'ended',
