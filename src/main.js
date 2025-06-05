@@ -14,13 +14,78 @@ let licenseData = null;
 // Get path to bundled Python
 function getBundledPythonPath() {
   const platform = process.platform;
-  const appPath = path.dirname(app.getAppPath());
   
+  // Get the application's base directory
+  const appPath = app.getAppPath();
+  console.log('App path:', appPath);
+  
+  // For macOS, try multiple possible locations
   if (platform === 'darwin' || platform === 'linux') {
-    return path.join(appPath, 'python', 'venv', 'bin', 'python');
+    const possiblePaths = [
+      path.join(appPath, 'python', 'venv', 'bin', 'python'),
+      path.join(appPath, '..', 'python', 'venv', 'bin', 'python'),
+      path.join(appPath, '..', '..', 'python', 'venv', 'bin', 'python'),
+      path.join(appPath, '..', '..', '..', 'python', 'venv', 'bin', 'python'),
+      path.join(appPath, '..', '..', '..', '..', 'python', 'venv', 'bin', 'python'),
+      path.join(appPath, 'Resources', 'app', 'python', 'venv', 'bin', 'python'),
+      path.join(appPath, '..', 'Resources', 'app', 'python', 'venv', 'bin', 'python'),
+      path.join(appPath, '..', '..', 'Resources', 'app', 'python', 'venv', 'bin', 'python'),
+      path.join(appPath, '..', '..', '..', 'Resources', 'app', 'python', 'venv', 'bin', 'python'),
+      path.join(appPath, 'game', 'python', 'bin', 'python'),
+      path.join(appPath, '..', 'game', 'python', 'bin', 'python')
+    ];
+    
+    // Log all paths we're checking
+    console.log('Checking Python paths:', possiblePaths);
+    
+    // Try each path
+    for (const pythonPath of possiblePaths) {
+      if (fs.existsSync(pythonPath)) {
+        console.log('Found Python at:', pythonPath);
+        return pythonPath;
+      }
+    }
+    
+    // If we can't find the bundled Python, try the system Python as a fallback
+    try {
+      const systemPython = execSync('which python3 || which python').toString().trim();
+      console.log('Using system Python:', systemPython);
+      return systemPython;
+    } catch (e) {
+      console.error('Could not find any Python installation');
+      return null;
+    }
   } else if (platform === 'win32') {
-    return path.join(appPath, 'python', 'venv', 'Scripts', 'python.exe');
+    // Similar approach for Windows
+    const possiblePaths = [
+      path.join(appPath, 'python', 'venv', 'Scripts', 'python.exe'),
+      path.join(appPath, '..', 'python', 'venv', 'Scripts', 'python.exe'),
+      path.join(appPath, '..', '..', 'python', 'venv', 'Scripts', 'python.exe'),
+      path.join(appPath, 'Resources', 'app', 'python', 'venv', 'Scripts', 'python.exe'),
+      path.join(appPath, '..', 'Resources', 'app', 'python', 'venv', 'Scripts', 'python.exe'),
+      path.join(appPath, 'game', 'python', 'Scripts', 'python.exe'),
+      path.join(appPath, '..', 'game', 'python', 'Scripts', 'python.exe')
+    ];
+    
+    for (const pythonPath of possiblePaths) {
+      if (fs.existsSync(pythonPath)) {
+        console.log('Found Python at:', pythonPath);
+        return pythonPath;
+      }
+    }
+    
+    // Fallback to system Python
+    try {
+      const systemPython = execSync('where python').toString().split('\r\n')[0];
+      console.log('Using system Python:', systemPython);
+      return systemPython;
+    } catch (e) {
+      console.error('Could not find any Python installation');
+      return null;
+    }
   }
+  
+  return null;
 }
 
 function showLicenseAgreement() {
@@ -201,6 +266,21 @@ function startGame(sender) {
   });
   
   const pythonExecutable = getBundledPythonPath();
+  if (!pythonExecutable) {
+    sender.send('loading-progress', {
+      percent: 100,
+      message: 'Could not find Python. Please make sure Python is installed.'
+    });
+    
+    sender.send('game-status', {
+      status: 'error',
+      message: 'Could not find Python. Please make sure Python is installed.'
+    });
+    return;
+  }
+  
+  console.log('Using Python executable:', pythonExecutable);
+  console.log('Game path:', gamePath);
   
   const options = {
     mode: 'text',
@@ -233,6 +313,7 @@ function startGame(sender) {
   }, 400);
   
   try {
+    console.log('Starting Python process with options:', JSON.stringify(options));
     pythonProcess = new PythonShell('game.py', options);
     isGameRunning = true;
     
@@ -251,21 +332,41 @@ function startGame(sender) {
     });
     
     pythonProcess.on('message', function(message) {
+      console.log('Game message:', message);
       sender.send('game-output', message);
     });
     
     pythonProcess.on('stderr', function(stderr) {
       console.error('Game stderr:', stderr);
+      
+      // Check for common errors
+      if (stderr.includes('ModuleNotFoundError') || stderr.includes('ImportError')) {
+        sender.send('game-status', {
+          status: 'error',
+          message: `Missing Python module. Please check your installation.`
+        });
+      }
     });
     
     pythonProcess.end(function (err, code, signal) {
+      console.log('Game process ended:', err, code, signal);
       isGameRunning = false;
       if (err) {
         console.error('Game error:', err);
-        sender.send('game-status', {
-          status: 'error',
-          message: `Game exited with error: ${err.message}`
-        });
+        
+        // Check for common errors
+        if (err.message && err.message.includes('ModuleNotFoundError: No module named')) {
+          const moduleName = err.message.split("'")[1];
+          sender.send('game-status', {
+            status: 'error',
+            message: `Error: Missing Python module '${moduleName}'. Please check your installation.`
+          });
+        } else {
+          sender.send('game-status', {
+            status: 'error',
+            message: `Game exited with error: ${err.message || 'Unknown error'}`
+          });
+        }
       } else {
         sender.send('game-status', {
           status: 'ended',
@@ -279,12 +380,12 @@ function startGame(sender) {
     
     sender.send('loading-progress', {
       percent: 100,
-      message: `Error: ${error.message}`
+      message: `Error: ${error.message || 'Unknown error'}`
     });
     
     sender.send('game-status', {
       status: 'error',
-      message: `Failed to start game: ${error.message}`
+      message: `Failed to start game: ${error.message || 'Unknown error'}`
     });
   }
 }
