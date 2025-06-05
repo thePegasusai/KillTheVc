@@ -349,14 +349,18 @@ function startGame(sender) {
   ];
   
   let stepIndex = 0;
-  const progressInterval = setInterval(() => {
+  // Use let instead of const for progressInterval to avoid reassignment error
+  let localProgressInterval = setInterval(() => {
     if (stepIndex < loadingSteps.length) {
       sender.send('loading-progress', loadingSteps[stepIndex]);
       stepIndex++;
     } else {
-      clearInterval(progressInterval);
+      clearInterval(localProgressInterval);
     }
   }, 400);
+  
+  // Store the interval reference in the global variable
+  progressInterval = localProgressInterval;
   
   try {
     console.log('Starting game with tkinter launcher...');
