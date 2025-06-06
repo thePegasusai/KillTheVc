@@ -85,25 +85,56 @@ def run_game():
             script_dir = os.path.dirname(os.path.abspath(__file__))
             sys.path.insert(0, script_dir)
             
-            # Try to import the game module
-            import game
-            print("Game module imported successfully")
-            return 0
-        except ImportError as e:
-            print(f"Could not import game module: {e}")
-            
-            # If import fails, try to run the standalone game
+            # Try to import OpenCV
             try:
-                # Try to import pygame
+                import cv2
+                print("OpenCV imported successfully")
+            except ImportError:
+                print("OpenCV not available, camera features will be disabled")
+            
+            # Try to import mediapipe
+            try:
+                import mediapipe
+                print("Mediapipe imported successfully")
+            except ImportError:
+                print("Mediapipe not available, hand tracking features will be disabled")
+            
+            # Try to import the game module
+            try:
+                import game
+                print("Game module imported successfully")
+                return 0
+            except ImportError as e:
+                print(f"Could not import game module: {e}")
+                
+                # Try to run the standalone game
+                standalone_path = os.path.join(script_dir, "standalone_game.py")
+                if os.path.exists(standalone_path):
+                    print("Running standalone game...")
+                    
+                    # Import pygame here to ensure it's available
+                    import pygame
+                    pygame.init()
+                    
+                    # Import the standalone game module
+                    sys.path.insert(0, os.path.dirname(standalone_path))
+                    standalone_name = os.path.basename(standalone_path).replace(".py", "")
+                    
+                    try:
+                        standalone_module = __import__(standalone_name)
+                        if hasattr(standalone_module, 'main'):
+                            standalone_module.main()
+                        return 0
+                    except Exception as e:
+                        print(f"Failed to run standalone game: {e}")
+                        # Fall through to the simple game
+                
+                # If standalone game is not available or fails, run a simple game loop
+                print("Running simple game loop...")
+                
+                # Initialize pygame
                 import pygame
                 pygame.init()
-                
-                # Try to import OpenCV
-                try:
-                    import cv2
-                    print("OpenCV imported successfully")
-                except ImportError:
-                    print("OpenCV not available, running simplified game")
                 
                 # Create a window with specific flags for macOS
                 screen = pygame.display.set_mode((800, 600), pygame.SHOWN)
@@ -111,7 +142,6 @@ def run_game():
                 
                 # Set the window icon
                 try:
-                    script_dir = os.path.dirname(os.path.abspath(__file__))
                     icon_path = os.path.join(script_dir, "assets", "Assets", "icon-removebg-preview.png")
                     if os.path.exists(icon_path):
                         icon = pygame.image.load(icon_path)
@@ -122,18 +152,7 @@ def run_game():
                 # Bring the window to the front
                 bring_window_to_front()
                 
-                # Try to run the standalone game
-                standalone_path = os.path.join(script_dir, "standalone_game.py")
-                if os.path.exists(standalone_path):
-                    print("Running standalone game...")
-                    # Import the standalone game module
-                    sys.path.insert(0, os.path.dirname(standalone_path))
-                    standalone_name = os.path.basename(standalone_path).replace(".py", "")
-                    standalone_module = __import__(standalone_name)
-                    return 0
-                
-                # If standalone game is not available, run a simple game loop
-                print("Running simple game loop...")
+                # Game variables
                 clock = pygame.time.Clock()
                 running = True
                 background_color = (0, 0, 50)  # Dark blue background
@@ -208,10 +227,10 @@ def run_game():
                 # Clean up
                 pygame.quit()
                 return 0
-            except Exception as e:
-                print(f"Failed to run pygame: {e}")
-                traceback.print_exc()
-                return 1
+        except Exception as e:
+            print(f"Failed to run game: {e}")
+            traceback.print_exc()
+            return 1
     except Exception as e:
         print(f"Error running game: {e}")
         traceback.print_exc()

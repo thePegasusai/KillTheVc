@@ -42,9 +42,9 @@ echo "Installing pygame"
 echo "Installing OpenCV"
 "$PYTHON_PATH" -m pip install opencv-python
 
-# Install mediapipe for hand tracking
-echo "Installing mediapipe"
-"$PYTHON_PATH" -m pip install mediapipe
+# Install mediapipe with version constraint for Python 3.9 compatibility
+echo "Installing mediapipe (compatible version)"
+"$PYTHON_PATH" -m pip install "mediapipe<0.10.0" || echo "Mediapipe installation failed, continuing without it"
 
 # Install other dependencies
 echo "Installing other dependencies"
