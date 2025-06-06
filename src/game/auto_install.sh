@@ -38,6 +38,14 @@ echo "Upgrading pip"
 echo "Installing pygame"
 "$PYTHON_PATH" -m pip install pygame
 
+# Install OpenCV
+echo "Installing OpenCV"
+"$PYTHON_PATH" -m pip install opencv-python
+
+# Install mediapipe for hand tracking
+echo "Installing mediapipe"
+"$PYTHON_PATH" -m pip install mediapipe
+
 # Install other dependencies
 echo "Installing other dependencies"
 "$PYTHON_PATH" -m pip install numpy

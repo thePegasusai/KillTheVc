@@ -79,34 +79,6 @@ def run_game():
         # Set macOS-specific environment variables
         set_macos_environment()
         
-        # Initialize pygame
-        import pygame
-        pygame.init()
-        
-        # Create a window with specific flags for macOS
-        screen = pygame.display.set_mode((800, 600), pygame.SHOWN | pygame.NOFRAME)
-        pygame.display.set_caption("Kill the VC")
-        
-        # Set the window icon
-        try:
-            script_dir = os.path.dirname(os.path.abspath(__file__))
-            icon_path = os.path.join(script_dir, "assets", "Assets", "icon-removebg-preview.png")
-            if os.path.exists(icon_path):
-                icon = pygame.image.load(icon_path)
-                pygame.display.set_icon(icon)
-        except Exception as e:
-            print(f"Failed to set icon: {e}")
-        
-        # Bring the window to the front
-        bring_window_to_front()
-        
-        # Fill the screen with a color to make it visible
-        screen.fill((0, 0, 50))  # Dark blue background
-        pygame.display.flip()
-        
-        # Wait a moment to ensure the window is visible
-        time.sleep(1)
-        
         # Try to import and run the game module
         try:
             # Add the current directory to the path
@@ -120,80 +92,126 @@ def run_game():
         except ImportError as e:
             print(f"Could not import game module: {e}")
             
-            # If import fails, run a simple game loop
-            clock = pygame.time.Clock()
-            running = True
-            
-            # Simple game objects
-            player_x = 400
-            player_y = 500
-            player_speed = 5
-            
-            enemies = []
-            for i in range(5):
-                enemies.append({
-                    'x': 100 + i * 150,
-                    'y': 100,
-                    'speed': 2,
-                    'direction': 1
-                })
-            
-            # Main game loop
-            while running:
-                # Process events
-                for event in pygame.event.get():
-                    if event.type == pygame.QUIT:
-                        running = False
+            # If import fails, try to run the standalone game
+            try:
+                # Try to import pygame
+                import pygame
+                pygame.init()
                 
-                # Get keyboard input
-                keys = pygame.key.get_pressed()
-                if keys[pygame.K_LEFT]:
-                    player_x -= player_speed
-                if keys[pygame.K_RIGHT]:
-                    player_x += player_speed
+                # Try to import OpenCV
+                try:
+                    import cv2
+                    print("OpenCV imported successfully")
+                except ImportError:
+                    print("OpenCV not available, running simplified game")
                 
-                # Keep player within bounds
-                player_x = max(50, min(player_x, 750))
+                # Create a window with specific flags for macOS
+                screen = pygame.display.set_mode((800, 600), pygame.SHOWN)
+                pygame.display.set_caption("Kill the VC")
                 
-                # Update enemies
-                for enemy in enemies:
-                    enemy['x'] += enemy['speed'] * enemy['direction']
-                    if enemy['x'] < 50 or enemy['x'] > 750:
-                        enemy['direction'] *= -1
+                # Set the window icon
+                try:
+                    script_dir = os.path.dirname(os.path.abspath(__file__))
+                    icon_path = os.path.join(script_dir, "assets", "Assets", "icon-removebg-preview.png")
+                    if os.path.exists(icon_path):
+                        icon = pygame.image.load(icon_path)
+                        pygame.display.set_icon(icon)
+                except Exception as e:
+                    print(f"Failed to set icon: {e}")
                 
-                # Draw everything
-                screen.fill((0, 0, 50))  # Dark blue background
+                # Bring the window to the front
+                bring_window_to_front()
                 
-                # Draw player (triangle spaceship)
-                pygame.draw.polygon(screen, (0, 200, 255), [
-                    (player_x, player_y - 30),
-                    (player_x - 20, player_y),
-                    (player_x + 20, player_y)
-                ])
+                # Try to run the standalone game
+                standalone_path = os.path.join(script_dir, "standalone_game.py")
+                if os.path.exists(standalone_path):
+                    print("Running standalone game...")
+                    # Import the standalone game module
+                    sys.path.insert(0, os.path.dirname(standalone_path))
+                    standalone_name = os.path.basename(standalone_path).replace(".py", "")
+                    standalone_module = __import__(standalone_name)
+                    return 0
                 
-                # Draw enemies (red squares)
-                for enemy in enemies:
-                    pygame.draw.rect(screen, (255, 0, 0), (enemy['x'] - 20, enemy['y'] - 20, 40, 40))
+                # If standalone game is not available, run a simple game loop
+                print("Running simple game loop...")
+                clock = pygame.time.Clock()
+                running = True
+                background_color = (0, 0, 50)  # Dark blue background
                 
-                # Draw title
-                font = pygame.font.SysFont(None, 48)
-                title = font.render("Kill the VC", True, (255, 255, 255))
-                screen.blit(title, (400 - title.get_width() // 2, 30))
+                # Simple game objects
+                player_x = 400
+                player_y = 500
+                player_speed = 5
                 
-                # Draw instructions
-                font = pygame.font.SysFont(None, 24)
-                instructions = font.render("Use arrow keys to move, ESC to quit", True, (255, 255, 255))
-                screen.blit(instructions, (400 - instructions.get_width() // 2, 70))
+                enemies = []
+                for i in range(5):
+                    enemies.append({
+                        'x': 100 + i * 150,
+                        'y': 100,
+                        'speed': 2,
+                        'direction': 1
+                    })
                 
-                # Update display
-                pygame.display.flip()
+                # Main game loop
+                while running:
+                    # Process events
+                    for event in pygame.event.get():
+                        if event.type == pygame.QUIT:
+                            running = False
+                    
+                    # Get keyboard input
+                    keys = pygame.key.get_pressed()
+                    if keys[pygame.K_LEFT]:
+                        player_x -= player_speed
+                    if keys[pygame.K_RIGHT]:
+                        player_x += player_speed
+                    
+                    # Keep player within bounds
+                    player_x = max(50, min(player_x, 750))
+                    
+                    # Update enemies
+                    for enemy in enemies:
+                        enemy['x'] += enemy['speed'] * enemy['direction']
+                        if enemy['x'] < 50 or enemy['x'] > 750:
+                            enemy['direction'] *= -1
+                    
+                    # Draw everything
+                    screen.fill(background_color)
+                    
+                    # Draw player (triangle spaceship)
+                    pygame.draw.polygon(screen, (0, 200, 255), [
+                        (player_x, player_y - 30),
+                        (player_x - 20, player_y),
+                        (player_x + 20, player_y)
+                    ])
+                    
+                    # Draw enemies (red squares)
+                    for enemy in enemies:
+                        pygame.draw.rect(screen, (255, 0, 0), (enemy['x'] - 20, enemy['y'] - 20, 40, 40))
+                    
+                    # Draw title
+                    font = pygame.font.SysFont(None, 48)
+                    title = font.render("Kill the VC", True, (255, 255, 255))
+                    screen.blit(title, (400 - title.get_width() // 2, 30))
+                    
+                    # Draw instructions
+                    font = pygame.font.SysFont(None, 24)
+                    instructions = font.render("Use arrow keys to move, ESC to quit", True, (255, 255, 255))
+                    screen.blit(instructions, (400 - instructions.get_width() // 2, 70))
+                    
+                    # Update display
+                    pygame.display.flip()
+                    
+                    # Cap the frame rate
+                    clock.tick(60)
                 
-                # Cap the frame rate
-                clock.tick(60)
-            
-            # Clean up
-            pygame.quit()
-            return 0
+                # Clean up
+                pygame.quit()
+                return 0
+            except Exception as e:
+                print(f"Failed to run pygame: {e}")
+                traceback.print_exc()
+                return 1
     except Exception as e:
         print(f"Error running game: {e}")
         traceback.print_exc()
